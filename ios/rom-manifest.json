@@ -1,0 +1,132 @@
+[
+  {
+    "name": "mhtu2.bin",
+    "size": 1048576,
+    "crc": "3f0b0d0a"
+  },
+  {
+    "name": "mhtu3.bin",
+    "size": 1048576,
+    "crc": "ec1db988"
+  },
+  {
+    "name": "mhtu4.bin",
+    "size": 1048576,
+    "crc": "c7f847a3"
+  },
+  {
+    "name": "mhtu5.bin",
+    "size": 1048576,
+    "crc": "ef19316a"
+  },
+  {
+    "name": "htime54.bin",
+    "size": 524288,
+    "crc": "c2875d98"
+  },
+  {
+    "name": "htime63.bin",
+    "size": 524288,
+    "crc": "6f4728c3"
+  },
+  {
+    "name": "mhtu133.bin",
+    "size": 1048576,
+    "crc": "3163feed"
+  },
+  {
+    "name": "mhtu132.bin",
+    "size": 1048576,
+    "crc": "428eaf44"
+  },
+  {
+    "name": "mhtu131.bin",
+    "size": 1048576,
+    "crc": "5f7c5111"
+  },
+  {
+    "name": "mhtu130.bin",
+    "size": 1048576,
+    "crc": "c7c0c514"
+  },
+  {
+    "name": "mhtu129.bin",
+    "size": 1048576,
+    "crc": "b3d0daa0"
+  },
+  {
+    "name": "mhtu128.bin",
+    "size": 1048576,
+    "crc": "3704ee69"
+  },
+  {
+    "name": "mhtu127.bin",
+    "size": 1048576,
+    "crc": "4ea64d5a"
+  },
+  {
+    "name": "mhtu126.bin",
+    "size": 1048576,
+    "crc": "0c5c19b7"
+  },
+  {
+    "name": "mhtu125.bin",
+    "size": 1048576,
+    "crc": "46c43d67"
+  },
+  {
+    "name": "mhtu124.bin",
+    "size": 1048576,
+    "crc": "ed495156"
+  },
+  {
+    "name": "mhtu123.bin",
+    "size": 1048576,
+    "crc": "b48aa5da"
+  },
+  {
+    "name": "mhtu122.bin",
+    "size": 1048576,
+    "crc": "b18cd181"
+  },
+  {
+    "name": "mhtu121.bin",
+    "size": 1048576,
+    "crc": "5acb267a"
+  },
+  {
+    "name": "mhtu120.bin",
+    "size": 1048576,
+    "crc": "28e05f86"
+  },
+  {
+    "name": "mhtu119.bin",
+    "size": 1048576,
+    "crc": "b4f604ea"
+  },
+  {
+    "name": "mhtu118.bin",
+    "size": 1048576,
+    "crc": "a257b973"
+  },
+  {
+    "name": "mhtu113.bin",
+    "size": 1048576,
+    "crc": "d712a779"
+  },
+  {
+    "name": "mhtu112.bin",
+    "size": 1048576,
+    "crc": "644e1bca"
+  },
+  {
+    "name": "mhtu111.bin",
+    "size": 1048576,
+    "crc": "10d3b768"
+  },
+  {
+    "name": "mhtu110.bin",
+    "size": 1048576,
+    "crc": "8575aeb2"
+  }
+]

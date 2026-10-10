@@ -1,0 +1,22 @@
+# Dependencies fetched or extracted for building
+/vendor/
+
+# Build outputs and logs
+/dist/
+/ios/.build/
+/ios/Core/
+/ios/DerivedData*/
+/desktop/.build/
+*.log
+__pycache__/
+
+# Xcode and macOS user state
+xcuserdata/
+*.xcuserstate
+.DS_Store
+
+# Game files never belong in this repository
+*.zip
+*.ipa
+*.bin
+*.nv

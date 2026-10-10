@@ -1,0 +1,448 @@
+diff --git a/Makefile.split b/Makefile.split
+index 21bbbde..9e0cd13 100644
+--- a/Makefile.split
++++ b/Makefile.split
+@@ -108,6 +108,19 @@ SOUNDS+=DISCRETE@
+ SOUNDS+=YM2610@
+ SOUNDS+=AY8910@
+ 
++# Hangtime iOS: Wolf-unit CPU, DCS audio and video hardware.
++ifneq (,$(filter $(INCLUDE_DRV),drv_hangtime))
++ CPUS += TMS34010@ ADSP2100@ ADSP2101@ ADSP2104@ ADSP2105@ ADSP2115@ TMS32031@ M6809@ M68000@ Z80@
++ SOURCES_C += $(CORE_DIR)/drivers/midwunit.c \
++ $(CORE_DIR)/machine/midwunit_machine.c $(CORE_DIR)/machine/midwayic.c \
++ $(CORE_DIR)/vidhrdw/midtunit_vidhrdw.c $(CORE_DIR)/sndhrdw/dcs.c \
++ $(CORE_DIR)/machine/midyunit_machine.c $(CORE_DIR)/vidhrdw/midyunit_vidhrdw.c \
++ $(CORE_DIR)/sndhrdw/williams_sndhrdw.c $(CORE_DIR)/sndhrdw/cage_sndhrdw.c \
++ $(CORE_DIR)/machine/pd4990a.c $(CORE_DIR)/machine/neocrypt.c \
++ $(CORE_DIR)/drivers/neogeo.c $(CORE_DIR)/vidhrdw/neogeo_vidhrdw.c
++ SOUNDS += YM2151_ALT@ HC55516@ OKIM6295@
++endif
++
+ # drivers
+ ifneq (,$(filter $(INCLUDE_DRV),drv_1942 core_none))
+ 	CPUS+=Z80@
+@@ -2656,8 +2669,15 @@ SOURCES_C += \
+ 	$(CORE_DIR)/libretro-deps/libFLAC/stream_decoder.c \
+ 	$(CORE_DIR)/libretro-deps/libFLAC/window.c
+ 
++ifneq ($(INCLUDE_DRV),drv_hangtime)
+ ifeq ($(STATIC_LINKING),1)
+ else
++PORT_SUPPORT = 1
++endif
++else
++PORT_SUPPORT = 1
++endif
++ifeq ($(PORT_SUPPORT),1)
+ SOURCES_C += \
+ 	$(LIBRETRO_COMM_DIR)/compat/compat_posix_string.c \
+ 	$(LIBRETRO_COMM_DIR)/compat/compat_snprintf.c \
+diff --git a/src/cpu/tms34010/tms34010.c b/src/cpu/tms34010/tms34010.c
+index b32d401..71be102 100644
+--- a/src/cpu/tms34010/tms34010.c
++++ b/src/cpu/tms34010/tms34010.c
+@@ -1973,9 +1973,16 @@ READ16_HANDLER( tms34010_io_register_r )
+ 
+ 		case REG_HCOUNT:
+ 			/* scale the horizontal position from screen width to HTOTAL */
++#ifdef drv_hangtime
++			/* count on the arcade's 400 columns: the screen is widened for widescreen */
++			result = cpu_gethorzbeampos_width(400);
++			total = IOREG(REG_HTOTAL);
++			result = result * total / 400;
++#else
+ 			result = cpu_gethorzbeampos();
+ 			total = IOREG(REG_HTOTAL);
+ 			result = result * total / Machine->drv->screen_width;
++#endif
+ 
+ 			/* offset by the HBLANK end */
+ 			result += IOREG(REG_HEBLNK);
+diff --git a/src/cpuexec.c b/src/cpuexec.c
+index 2f870de..9dc3d53 100644
+--- a/src/cpuexec.c
++++ b/src/cpuexec.c
+@@ -1169,6 +1169,17 @@ int cpu_gethorzbeampos(void)
+ 	return (int)(time_since_scanline * scanline_period_inv * (double)Machine->drv->screen_width);
+ }
+ 
++#ifdef drv_hangtime
++/* Beam position on a given width: Hangtime's screen is wider than the arcade's for widescreen. */
++int cpu_gethorzbeampos_width(int width)
++{
++	double elapsed_time = timer_timeelapsed(refresh_timer);
++	int scanline = (int)(elapsed_time * scanline_period_inv);
++	double time_since_scanline = elapsed_time - (double)scanline * scanline_period;
++	return (int)(time_since_scanline * scanline_period_inv * (double)width);
++}
++#endif
++
+ 
+ 
+ /*************************************
+diff --git a/src/cpuexec.h b/src/cpuexec.h
+index a84389e..5e23fbb 100644
+--- a/src/cpuexec.h
++++ b/src/cpuexec.h
+@@ -248,6 +248,9 @@ double cpu_getscanlineperiod(void);
+ 
+ /* Returns the current horizontal beam position in pixels */
+ int cpu_gethorzbeampos(void);
++#ifdef drv_hangtime
++int cpu_gethorzbeampos_width(int width);
++#endif
+ 
+ /* Returns the current VBLANK state */
+ int cpu_getvblank(void);
+diff --git a/src/driver_split.c b/src/driver_split.c
+index 1fbbb66..fa280d5 100644
+--- a/src/driver_split.c
++++ b/src/driver_split.c
+@@ -72,6 +72,10 @@ const struct GameDriver *test_drivers[] =
+ 
+ #else	/* DRIVER_RECURSIVE */
+ 
++#ifdef drv_hangtime
++ DRIVER(nbahangt)
++#endif
++
+ #if defined(drv_1942) || defined(core_none)
+ 	/* 1942.c */
+ 	DRIVER( 1942 )		/* 12/1984 (c) 1984 */
+diff --git a/src/drivers/midwunit.c b/src/drivers/midwunit.c
+index c59290c..80c29f0 100644
+--- a/src/drivers/midwunit.c
++++ b/src/drivers/midwunit.c
+@@ -610,7 +610,11 @@ static MACHINE_DRIVER_START( wunit )
+ 
+ 	/* video hardware */
+ 	MDRV_VIDEO_ATTRIBUTES(VIDEO_TYPE_RASTER)
++#ifdef drv_hangtime
++	MDRV_SCREEN_SIZE(512, 256)		/* room for the full bitmap row in widescreen */
++#else
+ 	MDRV_SCREEN_SIZE(400, 256)
++#endif
+ 	MDRV_VISIBLE_AREA(0, 399, 0, 253)
+ 	MDRV_PALETTE_LENGTH(32768+2)
+ 
+diff --git a/src/lib/zlib/zutil.h b/src/lib/zlib/zutil.h
+index 951082d..6eb57dd 100644
+--- a/src/lib/zlib/zutil.h
++++ b/src/lib/zlib/zutil.h
+@@ -118,7 +118,7 @@ extern const char *  z_errmsg[10]; /* indexed by 2-zlib_error */
+ #  endif
+ #endif
+ 
+-#if defined(MACOS) || defined(TARGET_OS_MAC)
++#if defined(MACOS) || (defined(TARGET_OS_MAC) && !defined(__APPLE__))
+ #  define OS_CODE  0x07
+ #  ifndef Z_SOLO
+ #    if defined(__MWERKS__) && __dest_os != __be_os && __dest_os != __win32_os
+diff --git a/src/mame2003/mame2003.c b/src/mame2003/mame2003.c
+index 6aff90a..382fc0c 100644
+--- a/src/mame2003/mame2003.c
++++ b/src/mame2003/mame2003.c
+@@ -418,6 +418,22 @@ void retro_run (void)
+  
+ }
+ 
++#ifdef drv_hangtime
++/* The mobile frontend must persist NVRAM before OS suspension. */
++int hangtime_save_nvram(void)
++{
++    mame_file *file;
++    if (!Machine || !Machine->drv || !Machine->drv->nvram_handler)
++        return 0;
++    file = mame_fopen(Machine->gamedrv->name, 0, FILETYPE_NVRAM, 1);
++    if (!file)
++        return 0;
++    (*Machine->drv->nvram_handler)(file, 1);
++    mame_fclose(file);
++    return 1;
++}
++#endif
++
+ void retro_unload_game(void)
+ {
+     mame_done();
+diff --git a/src/vidhrdw/midtunit_vidhrdw.c b/src/vidhrdw/midtunit_vidhrdw.c
+index 6712c81..62d146a 100644
+--- a/src/vidhrdw/midtunit_vidhrdw.c
++++ b/src/vidhrdw/midtunit_vidhrdw.c
+@@ -14,6 +14,14 @@
+ #define FAST_DMA			0		/* DMAs complete immediately; reduces number of CPU switches */
+ #define LOG_DMA				0		/* DMAs are logged if the 'L' key is pressed */
+ 
++#ifdef drv_hangtime
++/* Widescreen draws 512 columns instead of 400; scale the blit time so a frame costs the same. */
++static int hangtime_wide, hangtime_fixed, hangtime_heads_forced;
++#define DMA_NSEC_PER_PIXEL	(hangtime_wide ? 32 : 41)
++#else
++#define DMA_NSEC_PER_PIXEL	41
++#endif
++
+ 
+ /* constants for the  DMA chip */
+ enum
+@@ -119,6 +127,11 @@ VIDEO_START( midwunit )
+ {
+ 	int result = video_start_midtunit();
+ 	midtunit_gfx_rom_large = 1;
++#ifdef drv_hangtime
++	hangtime_wide = 0;		/* a fresh program copy is unpatched */
++	hangtime_fixed = 0;
++	hangtime_heads_forced = 0;
++#endif
+ 	return result;
+ }
+ 
+@@ -839,13 +852,13 @@ skipdma:
+ 		else
+ 		{
+ 			TMS_SET_IRQ_LINE(CLEAR_LINE);
+-			timer_set(TIME_IN_NSEC((41+mk_delay) * pixels), 0, dma_callback);
++			timer_set(TIME_IN_NSEC((DMA_NSEC_PER_PIXEL+mk_delay) * pixels), 0, dma_callback);
+ 		}
+ 	}
+ 	else
+ 	{
+ 		TMS_SET_IRQ_LINE(CLEAR_LINE);
+-		timer_set(TIME_IN_NSEC((41+mk_delay) * pixels), 0, dma_callback);
++		timer_set(TIME_IN_NSEC((DMA_NSEC_PER_PIXEL+mk_delay) * pixels), 0, dma_callback);
+ 	}
+ 
+ 	profiler_mark(PROFILER_END);
+@@ -853,6 +866,193 @@ skipdma:
+ 
+ 
+ 
++#ifdef drv_hangtime
++/*************************************
++ *
++ *	NBA Hangtime widescreen
++ *
++ *************************************/
++
++/* The game draws into 512-pixel bitmap rows but shows only the 400 columns
++   after a 56-pixel pad (SCRNXP in SRC/DISP.EQU). Widescreen shows the whole
++   row while the court is up: the L1.1 program is patched in place so objects
++   are culled against the wider screen and the court lines are 512 wide.
++   SRC/ paths refer to the game's source at github.com/historicalsource/nba-hangtime. */
++#define HT_PAD			56
++#define HT_RAM(a)		midyunit_scratch_ram[((a) - 0x01000000) >> 4]
++#define HT_ROM(a)		midyunit_code_rom[((a) - 0xff800000) >> 4]
++#define HT_DTYPE		0x01002190		/* >0 while the 3D court is shown */
++#define HT_GNDSTAT		0x01072560		/* court floor drawing on */
++#define HT_SCRNTL		0x01002140		/* X word of the [Y,X] cull window */
++#define HT_SCRNLR		0x01002160
++
++static const struct { UINT32 address; UINT16 normal, wide; } hangtime_patches[] =
++{
++	/* gnd_dodma: court image source 56 pixels further left (indoor, outdoor) */
++	{ 0xff802fe0, 0x29b8, 0x27f8 },
++	{ 0xff803050, 0xf738, 0xf578 },
++	/* ...court lines 400 -> 512 pixels wide */
++	{ 0xff8032d0, 0x0190, 0x0200 },
++	/* ...the alignment NOPs become "movi [0,-56],a11 / addxy a11,a10" so lines start at column 0 */
++	{ 0xff803350, 0xc00a, 0x09eb },
++	{ 0xff803360, 0x0300, 0xffc8 },
++	{ 0xff803370, 0x0300, 0x0000 },
++	{ 0xff803380, 0x0300, 0xe16a },
++	/* display_init: SCRNST [0,-32] -> [0,-88] */
++	{ 0xff805f30, 0xffe0, 0xffa8 },
++	/* every SCRNEND [254,432] -> [254,488] */
++	{ 0xff805f90, 0x01b0, 0x01e8 }, { 0xff9fff10, 0x01b0, 0x01e8 }, { 0xffa006e0, 0x01b0, 0x01e8 },
++	{ 0xffa0c990, 0x01b0, 0x01e8 }, { 0xffa1dc50, 0x01b0, 0x01e8 }, { 0xffa1fab0, 0x01b0, 0x01e8 },
++	{ 0xffa27230, 0x01b0, 0x01e8 }, { 0xffa29760, 0x01b0, 0x01e8 }, { 0xffa2e0b0, 0x01b0, 0x01e8 },
++	{ 0xffa62c60, 0x01b0, 0x01e8 }, { 0xffa71900, 0x01b0, 0x01e8 }, { 0xffa94940, 0x01b0, 0x01e8 },
++	{ 0xffab17b0, 0x01b0, 0x01e8 }, { 0xffabe0d0, 0x01b0, 0x01e8 }, { 0xffabf8a0, 0x01b0, 0x01e8 },
++	{ 0xffad71f0, 0x01b0, 0x01e8 },
++	/* camera stops 56 pixels sooner so the view's outer edge matches the original at the
++	   court ends (WRLDMID +/- MAX_VIEW1, MAX_VIEW2 in SRC/PLYR2.ASM); CMPI stores ~value */
++	{ 0xff904f20, 0x1dd0, 0x1e08 }, { 0xff904fc0, 0x20a0, 0x2068 },	/* inbound setup */
++	{ 0xff908e30, 0x1dc1, 0x1df9 }, { 0xff908e70, 0x20af, 0x2077 },	/* inbound target */
++	{ 0xff9093a0, 0x1dd5, 0x1e0d }, { 0xff9093e0, 0x209b, 0x2063 },	/* dunk target */
++	{ 0xff909700, 0xe137, 0xe0ff }, { 0xff909730, 0x1ec8, 0x1f00 },	/* MAX_VIEW2 left */
++	{ 0xff909760, 0xdec7, 0xdeff }, { 0xff909790, 0x2138, 0x2100 },	/* MAX_VIEW2 right */
++	{ 0xff9099e0, 0xe23e, 0xe206 }, { 0xff909ab0, 0xdf50, 0xdf88 },	/* MAX_VIEW1 scroll stop */
++	/* player 1 and 4 status plates and turbo meters move to the new edges (SRC/BB.ASM init_t*) */
++	{ 0xff8b9e70, 0x002e, 0xfff6 }, { 0xff8b9ec0, 0x000e, 0xffd6 }, { 0xff8b9f20, 0x002e, 0xfff6 },
++	{ 0xff8ba300, 0x0160, 0x0198 }, { 0xff8ba350, 0x0140, 0x0178 }, { 0xff8ba3b0, 0x0160, 0x0198 },
++	/* jump ball meters: OFFSCR_X 221 -> 277, ONSCR_X 174 -> 230 (SRC/PLYR3.ASM) */
++	{ 0xff938e00, 0x00dd, 0x0115 }, { 0xff9391e0, 0x00dd, 0x0115 }, { 0xff939310, 0x00dd, 0x0115 },
++	{ 0xff939560, 0x00ae, 0x00e6 },
++	/* off-screen player arrows: the 4:3 edges SCX_L 0 / SCX_R 398 move out by 56 (SRC/SCORE.ASM plyr_lost) */
++	{ 0xff9d4f10, 0xfe9d, 0xfe65 }, { 0xff9d4f70, 0xffd3, 0x000b }, { 0xff9d5080, 0xffdf, 0x0017 },	/* PON_R, PON_L, POF_L */
++	{ 0xff9d51f0, 0x0028, 0xfff0 }, { 0xff9d53a0, 0xfe91, 0xfe59 }, { 0xff9d5510, 0x014a, 0x0182 },	/* ARWIX_L, POF_R, ARWIX_R */
++	{ 0xff9d5560, 0x0168, 0x01a0 }, { 0xff9d58c0, 0xffff, 0x0037 }, { 0xff9d5910, 0xfe8d, 0xfe55 }	/* TLX_O, ARWLX_L, ARWLX_R */
++};
++
++/* Status objects already on screen keep the X they were created with. Name text is
++   centred on its plate, so match player 1 and 4 by their region of the top band. */
++static void hangtime_move_plates(int wide)
++{
++	UINT32 object = HT_RAM(0x01002040) | (HT_RAM(0x01002050) << 16);	/* OBJLST */
++	int guard = 0, shift = wide ? HT_PAD : -HT_PAD;
++	while (object >= 0x01000000 && object < 0x01400000 && guard++ < 1000)
++	{
++		INT16 x = HT_RAM(object + 0x90);
++		if ((HT_RAM(object + 0xe0) & 0x2000) && (INT16)HT_RAM(object + 0xb0) < 40)	/* screen relative, top band */
++		{
++			/* compare in 4:3 coordinates */
++			if (x + (wide ? 0 : HT_PAD) >= -30 && x + (wide ? 0 : HT_PAD) < 70)
++				HT_RAM(object + 0x90) = x - shift;		/* player 1 */
++			else if (x - (wide ? 0 : HT_PAD) >= 300 && x - (wide ? 0 : HT_PAD) < 420)
++				HT_RAM(object + 0x90) = x + shift;		/* player 4 */
++		}
++		object = HT_RAM(object) | (HT_RAM(object + 0x10) << 16);
++	}
++}
++
++/*************************************
++ *
++ *	NBA Hangtime head size
++ *
++ *************************************/
++
++/* pup_bighead / pup_hugehead hold one bit per player (SRC/PLYR.ASM); each head object
++   picks scalehead_t, scalebighead_t or scalehugehead_t (ODATA_p) when it is created. */
++#define HT_PUP_BIGHEAD	0x01136b90
++#define HT_PUP_HUGEHEAD	0x01136ba0
++static const UINT32 hangtime_head_tables[3] = { 0xff80ae60, 0xff80b7e0, 0xff80c160 };
++
++/* The big and huge head codes set the bit of the player who entered them only: make them
++   cover all four players ("movk 1,a1 / sll a9,a1" becomes "movk 15,a1 / nop", SRC/BB3.ASM). */
++static const struct { UINT32 address; UINT16 original, fixed; } hangtime_fixes[] =
++{
++	{ 0xff8cc550, 0x1821, 0x19e1 }, { 0xff8cc560, 0x6321, 0x0300 },	/* sp_bighead */
++	{ 0xff8ccd20, 0x1821, 0x19e1 }, { 0xff8ccd30, 0x6321, 0x0300 }	/* sp_hugehead */
++};
++
++static int hangtime_heads;
++
++/* 0 = the game decides (codes and operator setting), 1 = big heads, 2 = huge heads for everyone. */
++void hangtime_set_heads(int mode)
++{
++	hangtime_heads = mode == 1 || mode == 2 ? mode : 0;
++}
++
++static void hangtime_apply_fixes(void)
++{
++	int i, count = sizeof(hangtime_fixes) / sizeof(hangtime_fixes[0]);
++	for (i = 0; i < count; i++)
++		if (HT_ROM(hangtime_fixes[i].address) != hangtime_fixes[i].original)
++			return;
++	for (i = 0; i < count; i++)
++		HT_ROM(hangtime_fixes[i].address) = hangtime_fixes[i].fixed;
++}
++
++static void hangtime_update_heads(int court)
++{
++	UINT32 object, table;
++	int guard = 0, i;
++	if (!hangtime_heads && !hangtime_heads_forced)
++		return;
++	/* players created from now on read these bits */
++	HT_RAM(HT_PUP_BIGHEAD) = hangtime_heads == 1 ? 0xf : 0;
++	HT_RAM(HT_PUP_HUGEHEAD) = hangtime_heads == 2 ? 0xf : 0;
++	if (!court)
++		return;
++	/* heads already on the court switch scale table now */
++	table = hangtime_head_tables[hangtime_heads];
++	object = HT_RAM(0x01002040) | (HT_RAM(0x01002050) << 16);	/* OBJLST */
++	while (object >= 0x01000000 && object < 0x01400000 && guard++ < 1000)
++	{
++		UINT32 data = HT_RAM(object + 0x1c0) | (HT_RAM(object + 0x1d0) << 16);
++		for (i = 0; i < 3; i++)
++			if (data == hangtime_head_tables[i])
++			{
++				HT_RAM(object + 0x1c0) = table & 0xffff;
++				HT_RAM(object + 0x1d0) = table >> 16;
++				break;
++			}
++		object = HT_RAM(object) | (HT_RAM(object + 0x10) << 16);
++	}
++	hangtime_heads_forced = hangtime_heads != 0;
++}
++
++static int hangtime_requested;
++
++/* Called by the frontend; takes effect at the next screen update. */
++void hangtime_set_widescreen(int enable)
++{
++	hangtime_requested = enable != 0;
++}
++
++int hangtime_widescreen_active(void)
++{
++	return hangtime_wide;
++}
++
++static void hangtime_apply_widescreen(void)
++{
++	int wide = hangtime_requested, i, count = sizeof(hangtime_patches) / sizeof(hangtime_patches[0]);
++
++	/* refuse anything but the exact L1.1 program */
++	for (i = 0; i < count; i++)
++		if (HT_ROM(hangtime_patches[i].address) != (wide ? hangtime_patches[i].normal : hangtime_patches[i].wide))
++		{
++			hangtime_requested = hangtime_wide;
++			return;
++		}
++	for (i = 0; i < count; i++)
++		HT_ROM(hangtime_patches[i].address) = wide ? hangtime_patches[i].wide : hangtime_patches[i].normal;
++
++	/* screens set the cull window once, so convert a live default window too */
++	if (HT_RAM(HT_SCRNTL) == (wide ? 0xffe0 : 0xffa8)) HT_RAM(HT_SCRNTL) = wide ? 0xffa8 : 0xffe0;
++	if (HT_RAM(HT_SCRNLR) == (wide ? 0x01b0 : 0x01e8)) HT_RAM(HT_SCRNLR) = wide ? 0x01e8 : 0x01b0;
++	hangtime_move_plates(wide);
++
++	set_visible_area(0, wide ? 511 : 399, Machine->visible_area.min_y, Machine->visible_area.max_y);
++	hangtime_wide = wide;
++}
++#endif
++
++
+ /*************************************
+  *
+  *	Core refresh routine
+@@ -887,6 +1087,10 @@ VIDEO_UPDATE( midtunit )
+ 
+ 	/* adjust the offset */
+ 	offset += xoffs;
++#ifdef drv_hangtime
++	if (Machine->visible_area.max_x >= 400)
++		offset -= HT_PAD;
++#endif
+ 	offset += 512 * cliprect->min_y;
+ 	offset &= 0x3ffff;
+ 
+@@ -902,4 +1106,27 @@ VIDEO_UPDATE( midtunit )
+ 
+       offset = (offset + 512) & 0x3ffff;
+    }
++
++#ifdef drv_hangtime
++	/* outside the court the pads hold scraps of 4:3 screens: show them as bars */
++	if (Machine->visible_area.max_x >= 400 && ((INT16)HT_RAM(HT_DTYPE) <= 0 || !HT_RAM(HT_GNDSTAT)))
++	{
++		pen_t black = get_black_pen();
++		for (v = cliprect->min_y; v <= cliprect->max_y; v++)
++		{
++			UINT16 *row = (UINT16 *)bitmap->base + v * bitmap->rowpixels;
++			int x;
++			for (x = 0; x < HT_PAD; x++)
++				row[x] = row[x + 400 + HT_PAD] = black;
++		}
++	}
++	if (!hangtime_fixed)
++	{
++		hangtime_apply_fixes();
++		hangtime_fixed = 1;
++	}
++	hangtime_update_heads((INT16)HT_RAM(HT_DTYPE) > 0 && HT_RAM(HT_GNDSTAT));
++	if (hangtime_requested != hangtime_wide)
++		hangtime_apply_widescreen();
++#endif
+ }
