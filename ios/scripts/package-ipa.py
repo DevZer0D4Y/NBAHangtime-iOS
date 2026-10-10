@@ -28,6 +28,9 @@ if target.exists():
     shutil.rmtree(target)
 shutil.copytree(source, target)
 shutil.copyfile(root / 'vendor/mame2003-plus/LICENSE.md', target / 'MAME-LICENSE.md')
+shutil.copyfile(root / 'LICENSE', target / 'LICENSE-MIT.txt')
+for name in ('SOURCE.md', 'RELEASE-NOTES.md'):
+    shutil.copyfile(root / name, target / name)
 # Unsigned payload only: discard debug records and local symbols containing build paths.
 subprocess.run(['xcrun', 'strip', '-S', '-x', str(target / info['CFBundleExecutable'])], check=True)
 for path in target.rglob('*'):

@@ -54,4 +54,4 @@ Command line: `"NBA Hangtime.exe" path\to\nbahangt.zip` starts with that archive
 
 ## Licenses
 
-The MAME 2003-Plus core is distributed under the MAME license (`MAME-LICENSE.md`): non-commercial use only. SDL2 is under the zlib license (`SDL-LICENSE.txt`). This is an unofficial fan project, not affiliated with or endorsed by Midway, Warner Bros. Games or the NBA.
+The port's own code uses the MIT license (`LICENSE-MIT.txt`). The MAME 2003-Plus core is distributed under the MAME license (`MAME-LICENSE.md`): non-commercial use only. SDL2 is under the zlib license (`SDL-LICENSE.txt`). See `SOURCE.md` for matching source and distribution information. This is an unofficial fan project, not affiliated with or endorsed by Midway, Warner Bros. Games or the NBA.

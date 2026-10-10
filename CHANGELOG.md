@@ -3,16 +3,14 @@
 ## 0.4.2 (build 7)
 
 - Keep the widescreen inbound camera inside the available scenery at both court ends, while preserving the full camera range during normal play and live settings changes.
+- Include the port's MIT notice, source references and release notes in both binary packages. Supply the matching port and patched core source archive with the release.
 
 ## 0.4.1 (build 6)
 
 - Read Windows Xbox buttons, sticks and triggers directly through XInput. Controller setup and menu navigation now poll the same input state as gameplay, including when controller button events are unavailable.
 - Declare iOS game-controller support and request gamepad event delivery through the GameController framework on iOS 18 and later.
 - Restore the arcade camera's full horizontal travel in widescreen mode so players do not disappear into the near-side corners.
-
-
 - Strip release executable debug metadata and local symbols that expose build paths. Audit release payloads for home-directory paths, private keys, signing files, ROMs and development artifacts before packaging.
-
 - Route iOS controller events to the game instead of UIKit navigation, including Menu/Start presses.
 - Keep controller player assignments stable when the system changes the controller list order or a controller disconnects. Clear disconnected inputs on Windows.
 - Select the native XInput backend for Xbox controllers on Windows.
