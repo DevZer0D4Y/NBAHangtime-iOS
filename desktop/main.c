@@ -7,6 +7,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <commdlg.h>
+#include <xinput.h>
 #endif
 
 /* RetroPad bits read by the core's classic layout: B = Turbo, Y = Pass/Steal, A = Shoot/Block. */
@@ -20,6 +21,7 @@ static const uint16_t action_bits[A_COUNT] = {PAD_UP,PAD_DOWN,PAD_LEFT,PAD_RIGHT
 /* Share and the paddles exist on Xbox Series and Elite controllers. pad_name is what settings.cfg stores,
    pad_title what the controls screen shows (Xbox names). */
 enum { P_A, P_B, P_X, P_Y, P_LB, P_RB, P_LT, P_RT, P_L3, P_R3, P_BACK, P_SHARE, P_PADDLE1, P_PADDLE2, P_PADDLE3, P_PADDLE4, P_COUNT };
+#include "XboxInput.h"
 static const char *pad_name[P_COUNT] = {"A","B","X","Y","LB","RB","LT","RT","L3","R3","BACK","SHARE","P1","P2","P3","P4"};
 static const char *pad_title[P_COUNT] = {"A","B","X","Y","LB","RB","LT","RT","LS","RS","VIEW","SHARE","P1","P2","P3","P4"};
 /* Controllers join as players 1, 3, 2 and 4: the first two play against each other. */
@@ -56,6 +58,7 @@ static SDL_Renderer *renderer;
 static SDL_Texture *texture;
 static SDL_AudioDeviceID audio_device;
 static SDL_GameController *controllers[4];
+static struct pad_sample previous_pad[4];
 static bool running;
 static char *save_dir;
 
@@ -132,18 +135,58 @@ static bool pad_down(SDL_GameController *g,int input) {
     if (input==P_RT) return SDL_GameControllerGetAxis(g,SDL_CONTROLLER_AXIS_TRIGGERRIGHT)>16000;
     return SDL_GameControllerGetButton(g,map[input]);
 }
-static unsigned pad_buttons(SDL_GameController *g) {
-    unsigned down=0;
-    for (int b=0;b<P_COUNT;b++) if (pad_down(g,b)) down |= 1u << b;
-    return down;
+static struct pad_sample read_pad(SDL_GameController *g) {
+    struct pad_sample sample={0};
+    if (!g) return sample;
+    for (int b=0;b<P_COUNT;b++) if (pad_down(g,b)) sample.down |= 1u << b;
+    Sint16 x=SDL_GameControllerGetAxis(g,SDL_CONTROLLER_AXIS_LEFTX), y=SDL_GameControllerGetAxis(g,SDL_CONTROLLER_AXIS_LEFTY);
+    if (SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_DPAD_UP) || y< -10000) sample.directions |= PAD_UP;
+    if (SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_DPAD_DOWN) || y>10000) sample.directions |= PAD_DOWN;
+    if (SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_DPAD_LEFT) || x< -10000) sample.directions |= PAD_LEFT;
+    if (SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_DPAD_RIGHT) || x>10000) sample.directions |= PAD_RIGHT;
+    sample.start=SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_START);
+    sample.home=SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_GUIDE);
+#ifdef _WIN32
+    /* SDL exposes the actual XInput user index in the native device path.
+       Read its fixed button layout directly, without a controller mapping or
+       packet-number/event dependency. SDL still supplies Share and paddles. */
+    const char *path=SDL_JoystickPath(SDL_GameControllerGetJoystick(g));
+    unsigned user; char extra;
+    if (path && sscanf(path,"XInput#%u%c",&user,&extra)==1 && user<4) {
+        typedef DWORD (WINAPI *get_state_fn)(DWORD,XINPUT_STATE *);
+        static get_state_fn get_state;
+        static bool attempted;
+        if (!attempted) {
+            const char *dlls[]={"xinput1_4.dll","xinput1_3.dll","xinput9_1_0.dll"};
+            attempted=true;
+            for (unsigned i=0;i<3 && !get_state;i++) {
+                HMODULE module=LoadLibraryExA(dlls[i],NULL,LOAD_LIBRARY_SEARCH_SYSTEM32);
+                if (module) {
+                    get_state=(get_state_fn)GetProcAddress(module,"XInputGetState");
+                    if (!get_state) FreeLibrary(module);
+                }
+            }
+        }
+        XINPUT_STATE state;
+        if (get_state && get_state(user,&state)==ERROR_SUCCESS) {
+            struct pad_sample native=xbox_sample(state.Gamepad.wButtons,state.Gamepad.bLeftTrigger,
+                state.Gamepad.bRightTrigger,state.Gamepad.sThumbLX,state.Gamepad.sThumbLY);
+            native.down |= sample.down & ((1u<<P_SHARE)|(1u<<P_PADDLE1)|(1u<<P_PADDLE2)|(1u<<P_PADDLE3)|(1u<<P_PADDLE4));
+            native.home=sample.home;
+            return native;
+        }
+    }
+#endif
+    return sample;
 }
 /* Clears every player; with suppress, buttons still held (e.g. A on RESUME) stay ignored until released. */
 static void reset_players(bool suppress) {
     for (unsigned i=0;i<4;i++) {
         memset(&players[i],0,sizeof players[i]); players[i].spin=-1;
         if (suppress && controllers[i]) {
-            players[i].suppressed=pad_buttons(controllers[i]);
-            players[i].start_down=SDL_GameControllerGetButton(controllers[i],SDL_CONTROLLER_BUTTON_START);
+            struct pad_sample sample=read_pad(controllers[i]);
+            players[i].suppressed=sample.down;
+            players[i].start_down=sample.start;
             players[i].start_used=true;
         }
     }
@@ -240,6 +283,7 @@ static void choose_file(void) {
 static void update_controllers(void) {
     for (unsigned i=0;i<4;i++) if (controllers[i] && !SDL_GameControllerGetAttached(controllers[i])) {
         SDL_GameControllerClose(controllers[i]); controllers[i]=NULL;
+        memset(&previous_pad[i],0,sizeof previous_pad[i]);
         memset(&players[i],0,sizeof players[i]); players[i].spin=-1;
     }
     for (int j=0;j<SDL_NumJoysticks();j++) {
@@ -259,15 +303,15 @@ static void input_poll(void) {
         if (i==0) for (int a=0;a<A_COUNT;a++) if (keys[a]!=SDL_SCANCODE_UNKNOWN && keyboard[keys[a]]) p->held[a]=true;
         SDL_GameController *g=controllers[i];
         if (g) {
-            unsigned down=pad_buttons(g);
+            struct pad_sample sample=read_pad(g);
+            unsigned down=sample.down;
             p->suppressed &= down; down &= ~p->suppressed;
             for (int a=0;a<A_COUNT;a++) if (pads[a] & down) p->held[a]=true;
-            Sint16 x=SDL_GameControllerGetAxis(g,SDL_CONTROLLER_AXIS_LEFTX), y=SDL_GameControllerGetAxis(g,SDL_CONTROLLER_AXIS_LEFTY);
-            if (SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_DPAD_UP) || y < -10000) p->held[A_UP]=true;
-            if (SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_DPAD_DOWN) || y > 10000) p->held[A_DOWN]=true;
-            if (SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_DPAD_LEFT) || x < -10000) p->held[A_LEFT]=true;
-            if (SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_DPAD_RIGHT) || x > 10000) p->held[A_RIGHT]=true;
-            bool start=SDL_GameControllerGetButton(g,SDL_CONTROLLER_BUTTON_START);
+            if (sample.directions & PAD_UP) p->held[A_UP]=true;
+            if (sample.directions & PAD_DOWN) p->held[A_DOWN]=true;
+            if (sample.directions & PAD_LEFT) p->held[A_LEFT]=true;
+            if (sample.directions & PAD_RIGHT) p->held[A_RIGHT]=true;
+            bool start=sample.start;
             if (start && !p->start_down) { p->start_since=now; p->start_used=false; }
             if (start && !p->start_used && now-p->start_since>=600) { p->start_used=true; p->start_down=true; open_menu(MENU_PAUSE); return; }
             if (!start && p->start_down && !p->start_used) p->start_pulse=6;
@@ -521,6 +565,31 @@ static void pad_button(Uint8 button,bool *quit) {
     default: break;
     }
 }
+static void poll_pad_menus(bool *quit) {
+    for (unsigned i=0;i<4;i++) {
+        struct pad_sample sample=read_pad(controllers[i]), before=previous_pad[i];
+        previous_pad[i]=sample;
+        unsigned edges=sample.down & ~before.down;
+        uint16_t directions=sample.directions & ~before.directions;
+        if (capture>=0) {
+            if ((sample.start && !before.start) || (sample.home && !before.home)) capture=-1;
+            else for (int b=0;b<P_COUNT;b++) if (edges & (1u<<b)) { pad_input(b); break; }
+            continue;
+        }
+        if (sample.home && !before.home) { pad_button(SDL_CONTROLLER_BUTTON_GUIDE,quit); continue; }
+        if (menu==MENU_NONE) continue;
+        /* Handle one menu action per controller sample: opening a remap must
+           not immediately bind another button held in that same sample. */
+        if (sample.start && !before.start) pad_button(SDL_CONTROLLER_BUTTON_START,quit);
+        else if (edges & (1u<<P_A)) pad_button(SDL_CONTROLLER_BUTTON_A,quit);
+        else if (edges & (1u<<P_B)) pad_button(SDL_CONTROLLER_BUTTON_B,quit);
+        else if (edges & (1u<<P_Y)) pad_button(SDL_CONTROLLER_BUTTON_Y,quit);
+        else if (directions & PAD_UP) pad_button(SDL_CONTROLLER_BUTTON_DPAD_UP,quit);
+        else if (directions & PAD_DOWN) pad_button(SDL_CONTROLLER_BUTTON_DPAD_DOWN,quit);
+        else if (directions & PAD_LEFT) pad_button(SDL_CONTROLLER_BUTTON_DPAD_LEFT,quit);
+        else if (directions & PAD_RIGHT) pad_button(SDL_CONTROLLER_BUTTON_DPAD_RIGHT,quit);
+    }
+}
 static void mouse_down(const SDL_MouseButtonEvent *event,bool *quit) {
     float x,y; SDL_RenderWindowToLogical(renderer,event->x,event->y,&x,&y);
     if (!running) { if (x>=190 && x<=610 && y>=270 && y<=340) choose_file(); return; }
@@ -545,13 +614,6 @@ static void handle_event(const SDL_Event *event,bool *quit) {
     case SDL_CONTROLLERDEVICEREMOVED: show_notice("CONTROLLER DISCONNECTED"); if (running && menu==MENU_NONE) open_menu(MENU_PAUSE); break;
     case SDL_MOUSEBUTTONDOWN: if (event->button.button==SDL_BUTTON_LEFT) mouse_down(&event->button,quit); break;
     case SDL_KEYDOWN: key_down(&event->key,quit); break;
-    case SDL_CONTROLLERBUTTONDOWN: pad_button(event->cbutton.button,quit); break;
-    case SDL_CONTROLLERAXISMOTION:
-        if (capture>=0 && event->caxis.value>20000) {
-            if (event->caxis.axis==SDL_CONTROLLER_AXIS_TRIGGERLEFT) pad_input(P_LT);
-            else if (event->caxis.axis==SDL_CONTROLLER_AXIS_TRIGGERRIGHT) pad_input(P_RT);
-        }
-        break;
     default: break;
     }
 }
@@ -599,6 +661,7 @@ int main(int argc,char **argv) {
        same controller through the optional HIDAPI Xbox driver. */
     SDL_SetHint(SDL_HINT_XINPUT_ENABLED,"1");
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_XBOX,"0");
+    SDL_SetHint(SDL_HINT_JOYSTICK_RAWINPUT,"0");
 #endif
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER)) { fprintf(stderr,"%s\n",SDL_GetError()); return 1; }
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"0");
@@ -632,6 +695,7 @@ int main(int argc,char **argv) {
         while (SDL_PollEvent(&event)) handle_event(&event,&quit);
         Uint64 now=SDL_GetPerformanceCounter(); double elapsed=(double)(now-previous)/frequency; previous=now;
         update_controllers();
+        poll_pad_menus(&quit);
         if (running && menu==MENU_NONE) input_poll();
         if (running && menu==MENU_NONE) {
             accumulated+=elapsed<0.1 ? elapsed : 0.1;

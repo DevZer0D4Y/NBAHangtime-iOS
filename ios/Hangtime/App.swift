@@ -62,6 +62,11 @@ final class GameViewController: GCEventViewController, UIDocumentPickerDelegate 
         super.viewDidLoad()
         // Deliver controller input to GameController rather than UIKit navigation.
         controllerUserInteractionEnabled = false
+        if #available(iOS 18.0, *) {
+            let interaction = GCEventInteraction()
+            interaction.handledEventTypes = .gamepad
+            view.addInteraction(interaction)
+        }
         view.backgroundColor = .black
         view.addSubview(screen)
         view.addSubview(startScreen)

@@ -20,4 +20,4 @@ with tempfile.TemporaryDirectory() as temp:
     command += subprocess.check_output(['sdl2-config', '--libs'], text=True).split()
     command += ['-lz', '-o', str(executable)]
     subprocess.run(command, check=True)
-    subprocess.run([str(executable)], check=True)
+    subprocess.run([str(executable), str(Path(temp)) + "/"], check=True)

@@ -43,7 +43,7 @@ The keyboard and the first controller play as player 1. Further controllers join
 
 ## Display
 
-- **WIDESCREEN** (on by default) shows more of the court during play instead of stretching the picture. The arcade draws 512 pixels per line but its monitor showed only the middle 400; widescreen shows them all. Players 1 and 4's name plates and the jump-ball meters move to the new edges, and the camera stops slightly sooner at each end of the court so nothing outside the original artwork comes into view. Menus and other screens stay 4:3. With widescreen off, the game runs exactly as the arcade original.
+- **WIDESCREEN** (on by default) shows more of the court during play instead of stretching the picture. The arcade draws 512 pixels per line but its monitor showed only the middle 400; widescreen shows them all. Players 1 and 4's name plates and the jump-ball meters move to the new edges, and the camera retains its full travel at both ends to keep near-side corner players visible. Menus and other screens stay 4:3. With widescreen off, the game runs exactly as the arcade original.
 - **SCREEN**: **ARCADE** keeps the arcade monitor's proportions (4:3, or about 16:9 in widescreen), **SQUARE** uses square pixels and **FULL** stretches the picture over the whole window.
 
 ## Your data

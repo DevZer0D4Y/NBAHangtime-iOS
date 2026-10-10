@@ -4,7 +4,9 @@
 #undef main
 #include <assert.h>
 
-int main(void) {
+int main(int argc,char **argv) {
+    assert(argc==2);
+    save_dir=argv[1];
     SDL_SetHint(SDL_HINT_VIDEODRIVER,"dummy");
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS,"1");
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER)==0);
@@ -43,6 +45,41 @@ int main(void) {
         SDL_JoystickSetVirtualAxis(virtual[i],SDL_CONTROLLER_AXIS_LEFTX,0);
         SDL_PumpEvents(); reset_players(false);
     }
+    /* Remapping and menu controls must work even with SDL button events disabled. */
+    SDL_EventState(SDL_CONTROLLERBUTTONDOWN,SDL_IGNORE);
+    SDL_EventState(SDL_CONTROLLERBUTTONUP,SDL_IGNORE);
+    bool quit=false;
+    running=true; menu=MENU_CONTROLS;
+    for (int b=0;b<P_COUNT;b++) {
+        if (b==P_SHARE || b>=P_PADDLE1) continue;
+        static const int button[P_COUNT]={SDL_CONTROLLER_BUTTON_A,SDL_CONTROLLER_BUTTON_B,SDL_CONTROLLER_BUTTON_X,
+            SDL_CONTROLLER_BUTTON_Y,SDL_CONTROLLER_BUTTON_LEFTSHOULDER,SDL_CONTROLLER_BUTTON_RIGHTSHOULDER,-1,-1,
+            SDL_CONTROLLER_BUTTON_LEFTSTICK,SDL_CONTROLLER_BUTTON_RIGHTSTICK,SDL_CONTROLLER_BUTTON_BACK};
+        capture=A_SHOOT;
+        if (b==P_LT || b==P_RT) SDL_JoystickSetVirtualAxis(virtual[0],b==P_LT ? SDL_CONTROLLER_AXIS_TRIGGERLEFT : SDL_CONTROLLER_AXIS_TRIGGERRIGHT,32767);
+        else SDL_JoystickSetVirtualButton(virtual[0],button[b],1);
+        SDL_PumpEvents(); poll_pad_menus(&quit);
+        assert(capture==-1 && pads[A_SHOOT]==(1u<<b));
+        if (b==P_LT || b==P_RT) SDL_JoystickSetVirtualAxis(virtual[0],b==P_LT ? SDL_CONTROLLER_AXIS_TRIGGERLEFT : SDL_CONTROLLER_AXIS_TRIGGERRIGHT,-32768);
+        else SDL_JoystickSetVirtualButton(virtual[0],button[b],0);
+        SDL_PumpEvents(); poll_pad_menus(&quit);
+    }
+    selection=0;
+    SDL_JoystickSetVirtualButton(virtual[0],SDL_CONTROLLER_BUTTON_DPAD_DOWN,1);
+    SDL_PumpEvents(); poll_pad_menus(&quit); assert(selection==1);
+    SDL_JoystickSetVirtualButton(virtual[0],SDL_CONTROLLER_BUTTON_DPAD_DOWN,0);
+    SDL_PumpEvents(); poll_pad_menus(&quit);
+    /* XInput digital bits, analog sticks and triggers bypass SDL's mapping. */
+    struct pad_sample native=xbox_sample(0xf3f0,255,255,-32768,32767);
+    assert((native.down & ((1u<<P_A)|(1u<<P_B)|(1u<<P_X)|(1u<<P_Y)|(1u<<P_LB)|(1u<<P_RB)|
+                          (1u<<P_L3)|(1u<<P_R3)|(1u<<P_BACK)|(1u<<P_LT)|(1u<<P_RT)))==
+                          ((1u<<P_A)|(1u<<P_B)|(1u<<P_X)|(1u<<P_Y)|(1u<<P_LB)|(1u<<P_RB)|
+                           (1u<<P_L3)|(1u<<P_R3)|(1u<<P_BACK)|(1u<<P_LT)|(1u<<P_RT)));
+    assert(native.start && native.directions==(PAD_LEFT|PAD_UP));
+    native=xbox_sample(0x000a,0,0,0,0);
+    assert(native.directions==(PAD_DOWN|PAD_RIGHT) && !native.down && !native.start);
+    running=false; menu=MENU_NONE;
+    memcpy(pads,default_pads,sizeof pads);
     SDL_JoystickSetVirtualButton(virtual[0],SDL_CONTROLLER_BUTTON_X,1);
     SDL_PumpEvents(); input_poll(); assert(players[0].held[A_SHOOT]);
     assert(SDL_JoystickDetachVirtual(0)==0);
@@ -54,6 +91,6 @@ int main(void) {
         SDL_JoystickClose(virtual[i]);
     }
     SDL_DestroyWindow(window); SDL_Quit();
-    puts("SDL controllers: four Xbox-style pads, gameplay buttons, movement, Start order and disconnect passed.");
+    puts("SDL controllers: four Xbox-style pads, gameplay buttons, movement, Start order, polled remapping, XInput decoding and disconnect passed.");
     return 0;
 }

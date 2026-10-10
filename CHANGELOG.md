@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 (build 6)
+
+- Read Windows Xbox buttons, sticks and triggers directly through XInput. Controller setup and menu navigation now poll the same input state as gameplay, including when controller button events are unavailable.
+- Declare iOS game-controller support and request gamepad event delivery through the GameController framework on iOS 18 and later.
+- Restore the arcade camera's full horizontal travel in widescreen mode so players do not disappear into the near-side corners.
+
 
 - Strip release executable debug metadata and local symbols that expose build paths. Audit release payloads for home-directory paths, private keys, signing files, ROMs and development artifacts before packaging.
 
