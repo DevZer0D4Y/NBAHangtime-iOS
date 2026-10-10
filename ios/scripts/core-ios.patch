@@ -1,5 +1,5 @@
 diff --git a/Makefile.split b/Makefile.split
-index 21bbbde..9e0cd13 100644
+index 21bbbdea..9e0cd13f 100644
 --- a/Makefile.split
 +++ b/Makefile.split
 @@ -108,6 +108,19 @@ SOUNDS+=DISCRETE@
@@ -39,7 +39,7 @@ index 21bbbde..9e0cd13 100644
  	$(LIBRETRO_COMM_DIR)/compat/compat_posix_string.c \
  	$(LIBRETRO_COMM_DIR)/compat/compat_snprintf.c \
 diff --git a/src/cpu/tms34010/tms34010.c b/src/cpu/tms34010/tms34010.c
-index b32d401..71be102 100644
+index b32d4015..71be102e 100644
 --- a/src/cpu/tms34010/tms34010.c
 +++ b/src/cpu/tms34010/tms34010.c
 @@ -1973,9 +1973,16 @@ READ16_HANDLER( tms34010_io_register_r )
@@ -60,7 +60,7 @@ index b32d401..71be102 100644
  			/* offset by the HBLANK end */
  			result += IOREG(REG_HEBLNK);
 diff --git a/src/cpuexec.c b/src/cpuexec.c
-index 2f870de..9dc3d53 100644
+index 2f870de9..9dc3d538 100644
 --- a/src/cpuexec.c
 +++ b/src/cpuexec.c
 @@ -1169,6 +1169,17 @@ int cpu_gethorzbeampos(void)
@@ -82,7 +82,7 @@ index 2f870de..9dc3d53 100644
  
  /*************************************
 diff --git a/src/cpuexec.h b/src/cpuexec.h
-index a84389e..5e23fbb 100644
+index a84389ef..5e23fbba 100644
 --- a/src/cpuexec.h
 +++ b/src/cpuexec.h
 @@ -248,6 +248,9 @@ double cpu_getscanlineperiod(void);
@@ -96,7 +96,7 @@ index a84389e..5e23fbb 100644
  /* Returns the current VBLANK state */
  int cpu_getvblank(void);
 diff --git a/src/driver_split.c b/src/driver_split.c
-index 1fbbb66..fa280d5 100644
+index 1fbbb660..fa280d5b 100644
 --- a/src/driver_split.c
 +++ b/src/driver_split.c
 @@ -72,6 +72,10 @@ const struct GameDriver *test_drivers[] =
@@ -111,7 +111,7 @@ index 1fbbb66..fa280d5 100644
  	/* 1942.c */
  	DRIVER( 1942 )		/* 12/1984 (c) 1984 */
 diff --git a/src/drivers/midwunit.c b/src/drivers/midwunit.c
-index c59290c..80c29f0 100644
+index c59290cb..80c29f01 100644
 --- a/src/drivers/midwunit.c
 +++ b/src/drivers/midwunit.c
 @@ -610,7 +610,11 @@ static MACHINE_DRIVER_START( wunit )
@@ -127,7 +127,7 @@ index c59290c..80c29f0 100644
  	MDRV_PALETTE_LENGTH(32768+2)
  
 diff --git a/src/lib/zlib/zutil.h b/src/lib/zlib/zutil.h
-index 951082d..6eb57dd 100644
+index 951082d3..6eb57ddd 100644
 --- a/src/lib/zlib/zutil.h
 +++ b/src/lib/zlib/zutil.h
 @@ -118,7 +118,7 @@ extern const char *  z_errmsg[10]; /* indexed by 2-zlib_error */
@@ -140,7 +140,7 @@ index 951082d..6eb57dd 100644
  #  ifndef Z_SOLO
  #    if defined(__MWERKS__) && __dest_os != __be_os && __dest_os != __win32_os
 diff --git a/src/mame2003/mame2003.c b/src/mame2003/mame2003.c
-index 6aff90a..382fc0c 100644
+index 6aff90aa..382fc0cc 100644
 --- a/src/mame2003/mame2003.c
 +++ b/src/mame2003/mame2003.c
 @@ -418,6 +418,22 @@ void retro_run (void)
@@ -167,7 +167,7 @@ index 6aff90a..382fc0c 100644
  {
      mame_done();
 diff --git a/src/vidhrdw/midtunit_vidhrdw.c b/src/vidhrdw/midtunit_vidhrdw.c
-index 6712c81..62d146a 100644
+index 6712c819..612d4e7f 100644
 --- a/src/vidhrdw/midtunit_vidhrdw.c
 +++ b/src/vidhrdw/midtunit_vidhrdw.c
 @@ -14,6 +14,14 @@
@@ -213,7 +213,7 @@ index 6712c81..62d146a 100644
  	}
  
  	profiler_mark(PROFILER_END);
-@@ -853,6 +866,193 @@ skipdma:
+@@ -853,6 +866,196 @@ skipdma:
  
  
  
@@ -269,6 +269,9 @@ index 6712c81..62d146a 100644
 +	/* player 1 and 4 status plates and turbo meters move to the new edges (SRC/BB.ASM init_t*) */
 +	{ 0xff8b9e70, 0x002e, 0xfff6 }, { 0xff8b9ec0, 0x000e, 0xffd6 }, { 0xff8b9f20, 0x002e, 0xfff6 },
 +	{ 0xff8ba300, 0x0160, 0x0198 }, { 0xff8ba350, 0x0140, 0x0178 }, { 0xff8ba3b0, 0x0160, 0x0198 },
++	/* possession bracket and scoring flash X tables (SRC/SCORE.ASM bracket_drw, flsh_bgnd) */
++	{ 0xff9de290, 0x0009, 0xffd1 }, { 0xff9de2c0, 0x013b, 0x0173 },
++	{ 0xff9de610, 0x0009, 0xffd1 }, { 0xff9de640, 0x013b, 0x0173 },
 +	/* jump ball meters: OFFSCR_X 221 -> 277, ONSCR_X 174 -> 230 (SRC/PLYR3.ASM) */
 +	{ 0xff938e00, 0x00dd, 0x0115 }, { 0xff9391e0, 0x00dd, 0x0115 }, { 0xff939310, 0x00dd, 0x0115 },
 +	{ 0xff939560, 0x00ae, 0x00e6 },
@@ -407,7 +410,7 @@ index 6712c81..62d146a 100644
  /*************************************
   *
   *	Core refresh routine
-@@ -887,6 +1087,10 @@ VIDEO_UPDATE( midtunit )
+@@ -887,6 +1090,10 @@ VIDEO_UPDATE( midtunit )
  
  	/* adjust the offset */
  	offset += xoffs;
@@ -418,7 +421,7 @@ index 6712c81..62d146a 100644
  	offset += 512 * cliprect->min_y;
  	offset &= 0x3ffff;
  
-@@ -902,4 +1106,27 @@ VIDEO_UPDATE( midtunit )
+@@ -902,4 +1109,27 @@ VIDEO_UPDATE( midtunit )
  
        offset = (offset + 512) & 0x3ffff;
     }

@@ -151,7 +151,33 @@ final class GamepadHub {
     private var menuSince: [ObjectIdentifier: CFTimeInterval] = [:]
     private var repeatState: (event: NavEvent, next: CFTimeInterval)?
 
-    var controllers: [GCController] { Array(GCController.controllers().filter { $0.extendedGamepad != nil }.prefix(4)) }
+    private let controllerProvider: () -> [GCController]
+    private var slots = [GCController?](repeating: nil, count: 4)
+
+    init(controllerProvider: @escaping () -> [GCController] = { GCController.controllers() }) {
+        self.controllerProvider = controllerProvider
+    }
+
+    // The framework's list can reorder when a controller becomes current. Keep physical
+    // controllers in their original slots, including holes after a disconnect.
+    private func refreshControllers() {
+        let available = controllerProvider().filter { $0.extendedGamepad != nil }
+        for index in slots.indices {
+            if let controller = slots[index], !available.contains(where: { $0 === controller }) {
+                let id = ObjectIdentifier(controller)
+                previous[id] = nil; suppressed[id] = nil; previousDirections[id] = nil
+                previousSystem[id] = nil; menuSince[id] = nil
+                slots[index] = nil
+            }
+        }
+        for controller in available where !slots.contains(where: { $0 === controller }) {
+            guard let index = slots.firstIndex(where: { $0 == nil }) else { break }
+            slots[index] = controller
+            controller.extendedGamepad?.buttonMenu.preferredSystemGestureState = .disabled
+        }
+    }
+
+    var controllers: [GCController] { refreshControllers(); return slots.compactMap { $0 } }
     var connected: Bool { !controllers.isEmpty }
     var name: String? { controllers.first.map { $0.vendorName ?? "Game controller" } }
     var family: Int {
@@ -166,6 +192,7 @@ final class GamepadHub {
     func claimSystemButtons() {
         let shareBound = bindings.values.contains { $0.contains(.share) }
         for c in controllers {
+            c.extendedGamepad?.buttonMenu.preferredSystemGestureState = .disabled
             c.extendedGamepad?.buttonHome?.preferredSystemGestureState = .disabled
             c.extendedGamepad?.buttonOptions?.preferredSystemGestureState = .disabled
             (c.extendedGamepad as? GCXboxGamepad)?.buttonShare?.preferredSystemGestureState = shareBound ? .disabled : .enabled
@@ -197,8 +224,12 @@ final class GamepadHub {
         var events: [NavEvent] = []
         var active = false
         var heldNav: NavEvent?
-        for (index, controller) in controllers.enumerated() {
-            guard let g = controller.extendedGamepad else { continue }
+        refreshControllers()
+        for (index, controller) in slots.enumerated() {
+            guard let controller, let g = controller.extendedGamepad else {
+                players.append(PadState())
+                continue
+            }
             let player = Self.playerOrder[index]
             if controller.playerIndex.rawValue != player { controller.playerIndex = GCControllerPlayerIndex(rawValue: player) ?? .indexUnset }
             let id = ObjectIdentifier(controller)

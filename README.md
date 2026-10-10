@@ -133,8 +133,9 @@ This writes `dist/windows-x64/` and `dist/NBA-Hangtime-Windows-x64.zip`. On Wind
 After a first build has fetched the core:
 
 ```sh
-python3 ios/tests/run-tests.py                               # ROM importer and core bridge; no game files needed
+python3 ios/tests/run-tests.py                               # ROM importer, core bridge and gamepad routing; no game files needed
 python3 desktop/build.py                                     # native macOS build of the same frontend (brew install sdl2)
+python3 desktop/tests/run-controller-tests.py                 # four virtual gamepads; no game files needed
 python3 desktop/tests/run-game-test.py /path/to/nbahangt.zip   # runs the real game: video, audio and saved data
 ```
 

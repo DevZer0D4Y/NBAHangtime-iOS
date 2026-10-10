@@ -238,7 +238,10 @@ static void choose_file(void) {
 #endif
 }
 static void update_controllers(void) {
-    for (unsigned i=0;i<4;i++) if (controllers[i] && !SDL_GameControllerGetAttached(controllers[i])) { SDL_GameControllerClose(controllers[i]); controllers[i]=NULL; }
+    for (unsigned i=0;i<4;i++) if (controllers[i] && !SDL_GameControllerGetAttached(controllers[i])) {
+        SDL_GameControllerClose(controllers[i]); controllers[i]=NULL;
+        memset(&players[i],0,sizeof players[i]); players[i].spin=-1;
+    }
     for (int j=0;j<SDL_NumJoysticks();j++) {
         if (!SDL_IsGameController(j)) continue;
         SDL_JoystickID id=SDL_JoystickGetDeviceInstanceID(j); bool found=false;
@@ -591,6 +594,12 @@ int main(int argc,char **argv) {
         char report[8192]; bool ok=ht_validate_rom(argv[2],report,sizeof report);
         printf("%s\n",ok ? "L1.1 ROM set complete and valid." : report); return ok ? 0 : 2;
     }
+#ifdef _WIN32
+    /* Use the native XInput backend for Xbox pads instead of opening the
+       same controller through the optional HIDAPI Xbox driver. */
+    SDL_SetHint(SDL_HINT_XINPUT_ENABLED,"1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_XBOX,"0");
+#endif
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER)) { fprintf(stderr,"%s\n",SDL_GetError()); return 1; }
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"0");
     bool hidden=smoke || snapshots;

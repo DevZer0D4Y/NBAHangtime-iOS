@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Route iOS controller events to the game instead of UIKit navigation, including Menu/Start presses.
+- Keep controller player assignments stable when the system changes the controller list order or a controller disconnects. Clear disconnected inputs on Windows.
+- Select the native XInput backend for Xbox controllers on Windows.
+- Align player 1 and 4 possession indicators and scoring flashes with their status plates in widescreen mode.
+- Add controller regression coverage for four-player input, Start, pause, reconnects and menu button suppression.
+
 ## 0.4.0 (build 5)
 
 First public release.

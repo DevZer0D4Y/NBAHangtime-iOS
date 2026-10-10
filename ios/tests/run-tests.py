@@ -14,3 +14,8 @@ with tempfile.TemporaryDirectory(dir=root / 'ios') as temp:
                     str(root / 'ios/Hangtime/HangtimeCore.c'),
                     str(root / 'ios/tests/test_core_bridge.c'), '-o', str(executable)], check=True)
     subprocess.run([str(executable)], check=True)
+    if sys.platform == 'darwin':
+        gamepads = Path(temp) / 'gamepad-tests'
+        subprocess.run(['swiftc', str(root / 'ios/Hangtime/Input.swift'),
+                        str(root / 'ios/tests/test_gamepads.swift'), '-o', str(gamepads)], check=True)
+        subprocess.run([str(gamepads)], check=True)

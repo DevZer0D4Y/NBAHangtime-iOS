@@ -30,7 +30,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 }
 
-final class GameViewController: UIViewController, UIDocumentPickerDelegate {
+final class GameViewController: GCEventViewController, UIDocumentPickerDelegate {
     private let settings = GameSettings.shared
     private let screen = UIImageView()
     private let controls = ControlsView()
@@ -60,6 +60,8 @@ final class GameViewController: UIViewController, UIDocumentPickerDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        // Deliver controller input to GameController rather than UIKit navigation.
+        controllerUserInteractionEnabled = false
         view.backgroundColor = .black
         view.addSubview(screen)
         view.addSubview(startScreen)
