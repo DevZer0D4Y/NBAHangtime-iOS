@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Strip release executable debug metadata and local symbols that expose build paths. Audit release payloads for home-directory paths, private keys, signing files, ROMs and development artifacts before packaging.
+
 - Route iOS controller events to the game instead of UIKit navigation, including Menu/Start presses.
 - Keep controller player assignments stable when the system changes the controller list order or a controller disconnects. Clear disconnected inputs on Windows.
 - Select the native XInput backend for Xbox controllers on Windows.

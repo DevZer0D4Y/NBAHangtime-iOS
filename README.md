@@ -115,7 +115,7 @@ xcodebuild -project ios/Hangtime.xcodeproj -scheme Hangtime -configuration Relea
 python3 ios/scripts/package-ipa.py
 ```
 
-This writes an unsigned `dist/NBA-Hangtime-iOS.ipa`, ready for your sideloading tool. The packaging script refuses to include ROMs. You can also open `ios/Hangtime.xcodeproj` in Xcode, choose your team in Signing & Capabilities and run it on a device.
+This writes an unsigned `dist/NBA-Hangtime-iOS.ipa`, ready for your sideloading tool. Packaging strips debug metadata and checks the payload for private build paths, signing files and development artifacts. The packaging script refuses to include ROMs. You can also open `ios/Hangtime.xcodeproj` in Xcode, choose your team in Signing & Capabilities and run it on a device.
 
 ### Windows
 
@@ -126,7 +126,7 @@ python3 desktop/build.py --windows
 python3 desktop/package.py
 ```
 
-This writes `dist/windows-x64/` and `dist/NBA-Hangtime-Windows-x64.zip`. On Windows itself, MSYS2 MinGW64 works too: `python3 desktop/build.py --windows --cc gcc --ar ar --sdl-prefix /mingw64`.
+This writes `dist/windows-x64/` and `dist/NBA-Hangtime-Windows-x64.zip`. Packaging strips debug metadata and checks the payload for private build paths and development artifacts. On Windows itself, MSYS2 MinGW64 works too: `python3 desktop/build.py --windows --cc gcc --ar ar --sdl-prefix /mingw64`.
 
 ### Tests
 

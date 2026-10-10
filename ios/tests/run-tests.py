@@ -6,6 +6,7 @@ import sys
 import tempfile
 root = Path(__file__).resolve().parents[2]
 subprocess.run([sys.executable, str(root / 'ios/tests/test_rom_audit.py')], check=True)
+subprocess.run([sys.executable, str(root / 'ios/tests/test_release_hygiene.py')], check=True)
 with tempfile.TemporaryDirectory(dir=root / 'ios') as temp:
     executable = Path(temp) / 'core-tests'
     subprocess.run(['clang', '-fsanitize=address,undefined',
