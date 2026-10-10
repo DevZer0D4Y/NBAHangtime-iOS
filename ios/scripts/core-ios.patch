@@ -167,7 +167,7 @@ index 6aff90a..382fc0c 100644
  {
      mame_done();
 diff --git a/src/vidhrdw/midtunit_vidhrdw.c b/src/vidhrdw/midtunit_vidhrdw.c
-index 6712c81..e0f3391 100644
+index 6712c81..3618e13 100644
 --- a/src/vidhrdw/midtunit_vidhrdw.c
 +++ b/src/vidhrdw/midtunit_vidhrdw.c
 @@ -14,6 +14,14 @@
@@ -213,7 +213,7 @@ index 6712c81..e0f3391 100644
  	}
  
  	profiler_mark(PROFILER_END);
-@@ -853,6 +866,189 @@ skipdma:
+@@ -853,6 +866,193 @@ skipdma:
  
  
  
@@ -258,7 +258,11 @@ index 6712c81..e0f3391 100644
 +	{ 0xffa62c60, 0x01b0, 0x01e8 }, { 0xffa71900, 0x01b0, 0x01e8 }, { 0xffa94940, 0x01b0, 0x01e8 },
 +	{ 0xffab17b0, 0x01b0, 0x01e8 }, { 0xffabe0d0, 0x01b0, 0x01e8 }, { 0xffabf8a0, 0x01b0, 0x01e8 },
 +	{ 0xffad71f0, 0x01b0, 0x01e8 },
-+	/* Keep the original camera travel: near-side corner players need the full range. */
++	/* Widescreen adds 56 pixels at each side. Pull only the fixed inbound
++	   setup (SRC/PLYR.ASM) and target (SRC/PLYR2.ASM) inward by that margin.
++	   Keep MAX_VIEW2 and the general scroll stops original for corner play. */
++	{ 0xff904f20, 0x1dd0, 0x1e08 }, { 0xff904fc0, 0x20a0, 0x2068 }, /* inbound setup */
++	{ 0xff908e30, 0x1dc1, 0x1df9 }, { 0xff908e70, 0x20af, 0x2077 }, /* inbound target */
 +	/* player 1 and 4 status plates and turbo meters move to the new edges (SRC/BB.ASM init_t*) */
 +	{ 0xff8b9e70, 0x002e, 0xfff6 }, { 0xff8b9ec0, 0x000e, 0xffd6 }, { 0xff8b9f20, 0x002e, 0xfff6 },
 +	{ 0xff8ba300, 0x0160, 0x0198 }, { 0xff8ba350, 0x0140, 0x0178 }, { 0xff8ba3b0, 0x0160, 0x0198 },
@@ -403,7 +407,7 @@ index 6712c81..e0f3391 100644
  /*************************************
   *
   *	Core refresh routine
-@@ -887,6 +1083,10 @@ VIDEO_UPDATE( midtunit )
+@@ -887,6 +1087,10 @@ VIDEO_UPDATE( midtunit )
  
  	/* adjust the offset */
  	offset += xoffs;
@@ -414,7 +418,7 @@ index 6712c81..e0f3391 100644
  	offset += 512 * cliprect->min_y;
  	offset &= 0x3ffff;
  
-@@ -902,4 +1102,27 @@ VIDEO_UPDATE( midtunit )
+@@ -902,4 +1106,27 @@ VIDEO_UPDATE( midtunit )
  
        offset = (offset + 512) & 0x3ffff;
     }

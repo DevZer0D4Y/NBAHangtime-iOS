@@ -89,14 +89,14 @@ The touch controls, the keyboard and the first controller play as player 1. Furt
 The arcade draws every frame into video memory lines 512 pixels wide, but its monitor showed only 400 of them: 56 columns on each side were drawn and then hidden. In widescreen, the port shows the whole line while the court is up, and patches the L1.1 game program in memory when it loads (the ROM files are never changed) so that:
 
 - objects are culled against the wider screen, and the court floor is drawn 512 pixels wide;
-- the camera keeps its original travel at each end of the court so players stay visible in the near-side corners;
+- normal play keeps the original camera travel so players stay visible in the near-side corners; inbound views pull back by the widescreen margin to stay inside the scenery;
 - player 1 and 4's status plates, the jump-ball meters and the arrows pointing to off-screen players sit at the new edges.
 
 Menus and other screens stay 4:3 with black side bars. With widescreen off, the emulation is identical to the original. The patch locations come from the game's source code, published by [historicalsource](https://github.com/historicalsource/nba-hangtime).
 
 ## Status
 
-Current version: **0.4.1 (build 6)**. Only the arcade ROM set revision L1.1 is supported. See the [changelog](CHANGELOG.md) for the changes in each version.
+Current version: **0.4.2 (build 7)**. Only the arcade ROM set revision L1.1 is supported. See the [changelog](CHANGELOG.md) for the changes in each version.
 
 ## Building
 

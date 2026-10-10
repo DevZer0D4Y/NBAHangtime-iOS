@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2 (build 7)
+
+- Keep the widescreen inbound camera inside the available scenery at both court ends, while preserving the full camera range during normal play and live settings changes.
+
 ## 0.4.1 (build 6)
 
 - Read Windows Xbox buttons, sticks and triggers directly through XInput. Controller setup and menu navigation now poll the same input state as gameplay, including when controller button events are unavailable.
