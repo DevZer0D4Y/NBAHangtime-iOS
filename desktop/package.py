@@ -16,9 +16,10 @@ parser.add_argument('--strip', help='Path to a COFF-capable llvm-strip or MinGW 
 args=parser.parse_args()
 folder=root/'dist/windows-x64'
 required=['NBA Hangtime.exe','SDL2.dll','README.md','MAME-LICENSE.md','SDL-LICENSE.txt',
-          'LICENSE-MIT.txt','SOURCE.md','RELEASE-NOTES.md']
+          'LICENSE-MIT.txt','NewPixie-MIT.txt','SOURCE.md','RELEASE-NOTES.md']
 shutil.copy2(root/'desktop/README.md',folder/'README.md')
 shutil.copy2(root/'LICENSE',folder/'LICENSE-MIT.txt')
+shutil.copy2(root/'licenses/NewPixie-MIT.txt',folder/'NewPixie-MIT.txt')
 for name in ('SOURCE.md', 'RELEASE-NOTES.md'):
     shutil.copy2(root/name,folder/name)
 sdl_license=root/'vendor/SDL2-2.32.10/LICENSE.txt'

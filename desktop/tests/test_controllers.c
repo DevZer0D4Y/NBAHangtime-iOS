@@ -7,6 +7,12 @@
 int main(int argc,char **argv) {
     assert(argc==2);
     save_dir=argv[1];
+    /* The CRT setting is independently adjustable and survives relaunch. */
+    load_config(); assert(!crt_filter);
+    menu=MENU_PAUSE; selection=ITEM_CRT; menu_adjust(1); assert(crt_filter);
+    crt_filter=false; load_config(); assert(crt_filter);
+    menu_adjust(-1); assert(!crt_filter);
+    assert(MENU_TOP+(ITEM_COUNT-1)*MENU_STEP+MENU_H<550);
     SDL_SetHint(SDL_HINT_VIDEODRIVER,"dummy");
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS,"1");
     assert(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER)==0);

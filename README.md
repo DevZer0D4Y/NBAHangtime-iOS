@@ -98,7 +98,7 @@ Menus and other screens stay 4:3 with black side bars. With widescreen off, the 
 
 ## Status
 
-Current version: **0.4.2 (build 7)**. Only the arcade ROM set revision L1.1 is supported. See the [changelog](CHANGELOG.md) for the changes in each version.
+Current version: **0.4.3 (build 8)**. Only the arcade ROM set revision L1.1 is supported. See the [changelog](CHANGELOG.md) for the changes in each version.
 
 ## Building
 
@@ -136,6 +136,7 @@ After a first build has fetched the core:
 
 ```sh
 python3 ios/tests/run-tests.py                               # ROM importer, core bridge and gamepad routing; no game files needed
+python3 desktop/tests/run-crt-tests.py                       # CRT GPU regression; requires desktop OpenGL/display access
 python3 desktop/build.py                                     # native macOS build of the same frontend (brew install sdl2)
 python3 desktop/tests/run-controller-tests.py                 # four virtual gamepads; no game files needed
 python3 desktop/tests/run-game-test.py /path/to/nbahangt.zip   # runs the real game: video, audio and saved data
@@ -158,6 +159,8 @@ python3 desktop/tests/run-game-test.py /path/to/nbahangt.zip   # runs the real g
 - [SDL](https://www.libsdl.org) and [LLVM-MinGW](https://github.com/mstorsjo/llvm-mingw), for the Windows build.
 
 ## License
+
+The NewPixie CRT filter by Mattias Gustavsson (Slang adaptation by hunterk) uses the [MIT License](licenses/NewPixie-MIT.txt).
 
 The port's own code (the iOS app, the Windows frontend, the bridge and the scripts) is licensed under the [MIT License](LICENSE). The MAME 2003-Plus core and the changes to it in `ios/scripts/core-ios.patch` are under the [MAME 2003-Plus license](licenses/MAME-2003-Plus-LICENSE.md), which forbids commercial use. Every build includes the core, so the IPA and the Windows package can't be sold either.
 

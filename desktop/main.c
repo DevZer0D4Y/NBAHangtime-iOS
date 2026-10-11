@@ -1,6 +1,7 @@
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include "HangtimeCore.h"
+#include "CRTSDL.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,14 +38,15 @@ enum { SCREEN_FULL, SCREEN_SQUARE, SCREEN_ARCADE };
 static const char *screen_name[3] = {"FULL","SQUARE","ARCADE"};
 static int screen_mode = SCREEN_ARCADE;
 static bool fullscreen = true;
+static bool crt_filter;
 /* Widescreen shows the arcade's whole 512-column bitmap during play: more court, nothing stretched. */
 static bool widescreen = true;
 /* 0 = the game decides (codes), 1 = big heads, 2 = huge heads, for all four players. */
 static int heads;
 static const char *heads_name[3] = {"NORMAL","BIG","HUGE"};
 enum { MENU_NONE, MENU_PAUSE, MENU_CONTROLS };
-enum { ITEM_RESUME, ITEM_HEADS, ITEM_CONTROLS, ITEM_WIDESCREEN, ITEM_SCREEN, ITEM_FULLSCREEN, ITEM_RESTART, ITEM_QUIT, ITEM_COUNT };
-enum { MENU_TOP = 104, MENU_STEP = 54, MENU_H = 46, ROW_TOP = 136, ROW_STEP = 33 };
+enum { ITEM_RESUME, ITEM_HEADS, ITEM_CONTROLS, ITEM_WIDESCREEN, ITEM_SCREEN, ITEM_CRT, ITEM_FULLSCREEN, ITEM_RESTART, ITEM_QUIT, ITEM_COUNT };
+enum { MENU_TOP = 104, MENU_STEP = 48, MENU_H = 40, ROW_TOP = 136, ROW_STEP = 33 };
 static int menu, selection, capture = -1;
 static char notice[96];
 static Uint32 notice_until;
@@ -81,7 +83,7 @@ static void config_path(char *out,size_t size) { snprintf(out,size,"%ssettings.c
 static void save_config(void) {
     char path[4096]; config_path(path,sizeof path);
     FILE *f=fopen(path,"w"); if (!f) return;
-    fprintf(f,"screen=%d\nfullscreen=%d\nwidescreen=%d\nheads=%d\n",screen_mode,fullscreen,widescreen,heads);
+    fprintf(f,"screen=%d\nfullscreen=%d\nwidescreen=%d\nheads=%d\ncrt=%d\n",screen_mode,fullscreen,widescreen,heads,crt_filter);
     for (int a=0;a<A_COUNT;a++) {
         fprintf(f,"key.%s=%s\npad.%s=",action_id[a],SDL_GetScancodeName(keys[a]),action_id[a]);
         for (int b=0;b<P_COUNT;b++) if (pads[a] & (1u << b)) fprintf(f,"%s ",pad_name[b]);
@@ -98,6 +100,7 @@ static void load_config(void) {
         char *value=strchr(line,'='); if (!value) continue;
         *value++=0;
         if (!strcmp(line,"screen")) { int m=atoi(value); screen_mode=m>=0 && m<3 ? m : SCREEN_ARCADE; }
+        else if (!strcmp(line,"crt")) crt_filter=atoi(value)!=0;
         else if (!strcmp(line,"fullscreen")) fullscreen=atoi(value)!=0;
         else if (!strcmp(line,"widescreen")) widescreen=atoi(value)!=0;
         else if (!strcmp(line,"heads")) { int h=atoi(value); heads=h>=0 && h<3 ? h : 0; }
@@ -400,6 +403,10 @@ static void pad_label(int action,char *out,size_t size) {
     for (int b=0;b<P_COUNT;b++) if (pads[action] & (1u << b)) { size_t used=strlen(out); snprintf(out+used,size-used,"%s%s",used ? " " : "",pad_title[b]); }
     if (!out[0]) snprintf(out,size,"-");
 }
+static void toggle_crt(void) {
+    crt_filter=!crt_filter; crt_reset(); save_config();
+    show_notice(crt_filter ? "CRT FILTER ON" : "CRT FILTER OFF");
+}
 static void draw_pause(void) {
     header("PAUSED","ESC");
     char labels[ITEM_COUNT][40];
@@ -407,12 +414,13 @@ static void draw_pause(void) {
     snprintf(labels[ITEM_HEADS],40,"HEADS: < %s >",heads_name[heads]);
     snprintf(labels[ITEM_WIDESCREEN],40,"WIDESCREEN: %s",widescreen ? "ON" : "OFF");
     snprintf(labels[ITEM_SCREEN],40,"SCREEN: < %s >",screen_name[screen_mode]);
+    snprintf(labels[ITEM_CRT],40,"CRT FILTER: %s",crt_filter ? "ON" : "OFF");
     snprintf(labels[ITEM_FULLSCREEN],40,"FULLSCREEN: %s",fullscreen ? "ON" : "OFF");
     snprintf(labels[ITEM_RESTART],40,"RESTART ARCADE"); snprintf(labels[ITEM_QUIT],40,"QUIT GAME");
     for (int i=0;i<ITEM_COUNT;i++) {
         int y=MENU_TOP+i*MENU_STEP; bool on=i==selection;
         if (on) fill(200,y,400,MENU_H,252,188,41,255); else fill(200,y,400,MENU_H,0,0,0,150);
-        ink(on); text(labels[i],y+12,3);
+        ink(on); text(labels[i],y+8,3);
     }
     footer("ARROWS SELECT - ENTER OK - ESC RESUME - PAD: A OK, B BACK");
 }
@@ -462,7 +470,12 @@ static void draw(void) {
         if (texture) {
             SDL_UpdateTexture(texture,NULL,ht_pixels(),w*4);
             SDL_Rect rect=game_rect(width,height);
-            SDL_RenderCopy(renderer,texture,NULL,&rect);
+            if (!crt_filter || !crt_draw(renderer,texture,ht_pixels(),w,h,rect,true)) {
+                SDL_RenderCopy(renderer,texture,NULL,&rect);
+                if (crt_filter) {
+                    crt_filter=false; save_config(); show_notice("CRT FILTER UNAVAILABLE");
+                }
+            }
         }
         if (menu!=MENU_NONE) fill(0,0,width,height,0,0,0,190);
     }
@@ -485,6 +498,7 @@ static void menu_adjust(int delta) {
     if (selection==ITEM_SCREEN) cycle_screen(delta);
     else if (selection==ITEM_HEADS) cycle_heads(delta);
     else if (selection==ITEM_WIDESCREEN) toggle_widescreen();
+    else if (selection==ITEM_CRT) toggle_crt();
     else if (selection==ITEM_FULLSCREEN) toggle_fullscreen();
 }
 static void menu_accept(bool *quit) {
@@ -495,6 +509,7 @@ static void menu_accept(bool *quit) {
     case ITEM_WIDESCREEN: toggle_widescreen(); break;
     case ITEM_HEADS: cycle_heads(1); break;
     case ITEM_SCREEN: cycle_screen(1); break;
+    case ITEM_CRT: toggle_crt(); break;
     case ITEM_FULLSCREEN: toggle_fullscreen(); break;
     case ITEM_RESTART: ht_reset(); close_menu(); show_notice("ARCADE RESTARTED"); break;
     case ITEM_QUIT: *quit=true; break;
@@ -666,6 +681,7 @@ int main(int argc,char **argv) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER)) { fprintf(stderr,"%s\n",SDL_GetError()); return 1; }
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"0");
     bool hidden=smoke || snapshots;
+    if (!hidden) SDL_SetHint(SDL_HINT_RENDER_DRIVER,"opengl");
     window=SDL_CreateWindow("NBA Hangtime - Open or drop nbahangt.zip",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,
                             snapshots ? 1280 : 960,720,SDL_WINDOW_RESIZABLE | (hidden ? SDL_WINDOW_HIDDEN : 0));
     renderer=window ? SDL_CreateRenderer(window,-1,hidden ? SDL_RENDERER_SOFTWARE : SDL_RENDERER_ACCELERATED) : NULL;
@@ -713,7 +729,7 @@ int main(int argc,char **argv) {
     }
     if (audio_device) SDL_CloseAudioDevice(audio_device);
     ht_stop(); for (unsigned i=0;i<4;i++) if (controllers[i]) SDL_GameControllerClose(controllers[i]);
-    SDL_DestroyTexture(texture); SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window);
+    crt_shutdown(); SDL_DestroyTexture(texture); SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window);
     if (snapshots) free(save_dir); else SDL_free(save_dir);
     SDL_Quit();
     if (smoke) puts("Desktop launcher smoke test passed."); return 0;

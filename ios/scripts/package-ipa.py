@@ -29,6 +29,7 @@ if target.exists():
 shutil.copytree(source, target)
 shutil.copyfile(root / 'vendor/mame2003-plus/LICENSE.md', target / 'MAME-LICENSE.md')
 shutil.copyfile(root / 'LICENSE', target / 'LICENSE-MIT.txt')
+shutil.copyfile(root / 'licenses/NewPixie-MIT.txt', target / 'NewPixie-MIT.txt')
 for name in ('SOURCE.md', 'RELEASE-NOTES.md'):
     shutil.copyfile(root / name, target / name)
 # Unsigned payload only: discard debug records and local symbols containing build paths.

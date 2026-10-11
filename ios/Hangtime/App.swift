@@ -32,7 +32,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 final class GameViewController: GCEventViewController, UIDocumentPickerDelegate {
     private let settings = GameSettings.shared
-    private let screen = UIImageView()
+    private let screen = GameScreenView()
     private let controls = ControlsView()
     private let startScreen = StartScreenView()
     private let toast = ToastView()
@@ -73,6 +73,7 @@ final class GameViewController: GCEventViewController, UIDocumentPickerDelegate 
         controls.isHidden = true
         view.addSubview(controls)
         view.addSubview(toast)
+        screen.onUnavailable = { [weak self] in self?.toast.show("CRT FILTER UNAVAILABLE") }
         startScreen.onImport = { [weak self] in self?.importROM() }
         controls.onPause = { [weak self] in self?.openPauseMenu() }
         controls.onActionPressed = { [weak self] action in self?.sequencers[0].trigger(action) }
@@ -118,9 +119,8 @@ final class GameViewController: GCEventViewController, UIDocumentPickerDelegate 
     private func applySettings() {
         ht_set_widescreen(settings.widescreen)
         ht_set_heads(Int32(settings.heads))
-        let filter: CALayerContentsFilter = settings.smoothPixels ? .linear : .nearest
-        screen.layer.magnificationFilter = filter; screen.layer.minificationFilter = filter
-        screen.contentMode = .scaleToFill
+        screen.smooth = settings.smoothPixels
+        screen.crt = settings.crtFilter
         controls.sizeFactor = settings.sizeValue
         controls.alpha = settings.opacityValue
         controls.stick.floating = settings.floatingStick
@@ -249,9 +249,7 @@ final class GameViewController: GCEventViewController, UIDocumentPickerDelegate 
         guard w > 0, h > 0, let pixels = ht_pixels() else { return }
         let aspect = CGFloat(w) / CGFloat(h)
         if abs(aspect - frameAspect) > 0.001 { frameAspect = aspect; layoutScreen() }
-        let data = Data(bytes: pixels, count: w * h * 4)
-        guard let provider = CGDataProvider(data: data as CFData), let image = CGImage(width: w, height: h, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue), provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent) else { return }
-        screen.image = UIImage(cgImage: image)
+        screen.upload(pixels, width: w, height: h)
     }
 
     private func handle(_ event: NavEvent) {
