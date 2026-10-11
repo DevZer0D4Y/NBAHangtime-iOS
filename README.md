@@ -52,6 +52,8 @@ To update an existing installation, use the same signing identity and bundle ide
 2. Run `NBA Hangtime.exe`, then click **OPEN ROM ARCHIVE** or drag `nbahangt.zip` into the window.
 3. Press **5** for a credit, then **1** to start.
 
+Or you can just copy `nbahangt.zip` in the same folder where the .exe is.
+
 The [Windows guide](desktop/README.md) covers the controls, settings and where your data is kept.
 
 ## Playing and settings
