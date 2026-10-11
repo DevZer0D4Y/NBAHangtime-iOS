@@ -52,6 +52,8 @@ Settings, the copy of your ROM set and the arcade's saved data (high scores, rec
 
 Command line: `"NBA Hangtime.exe" path\to\nbahangt.zip` starts with that archive, and `"NBA Hangtime.exe" --audit path\to\nbahangt.zip` reports whether a set is complete.
 
+CRT FILTER in the pause menu enables the NewPixie CRT picture, with scanlines, glow and curvature. It is off by default, applies immediately and is saved for the next launch. If graphics support is unavailable, the normal picture remains available.
+
 ## Licenses
 
-The port's own code uses the MIT license (`LICENSE-MIT.txt`). The MAME 2003-Plus core is distributed under the MAME license (`MAME-LICENSE.md`): non-commercial use only. SDL2 is under the zlib license (`SDL-LICENSE.txt`). See `SOURCE.md` for matching source and distribution information. This is an unofficial fan project, not affiliated with or endorsed by Midway, Warner Bros. Games or the NBA.
+The port's own code uses the MIT license (`LICENSE-MIT.txt`). The MAME 2003-Plus core is distributed under the MAME license (`MAME-LICENSE.md`): non-commercial use only. SDL2 is under the zlib license (`SDL-LICENSE.txt`). NewPixie CRT uses the MIT license (`NewPixie-MIT.txt`). See `SOURCE.md` for matching source and distribution information. This is an unofficial fan project, not affiliated with or endorsed by Midway, Warner Bros. Games or the NBA.

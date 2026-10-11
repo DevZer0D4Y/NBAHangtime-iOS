@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3 (build 8)
+
+- Add the NewPixie CRT filter on iOS and Windows, with a saved CRT FILTER ON/OFF menu option. OFF is the default; changes apply immediately during play.
+- Keep the original sharp/smooth pixel display when CRT is off. Reset CRT feedback when toggling or changing frame dimensions.
+- Include the NewPixie MIT notice in source and binary releases.
+
 ## 0.4.2 (build 7)
 
 - Keep the widescreen inbound camera inside the available scenery at both court ends, while preserving the full camera range during normal play and live settings changes.

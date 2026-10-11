@@ -38,6 +38,10 @@ final class GameSettings {
         get { min(max(store.integer(forKey: "heads"), 0), 2) }
         set { store.set(newValue, forKey: "heads") }
     }
+    var crtFilter: Bool {
+        get { store.bool(forKey: "crtFilter") }
+        set { store.set(newValue, forKey: "crtFilter") }
+    }
     var smoothPixels: Bool {
         get { store.bool(forKey: "smoothPixels") }
         set { store.set(newValue, forKey: "smoothPixels") }

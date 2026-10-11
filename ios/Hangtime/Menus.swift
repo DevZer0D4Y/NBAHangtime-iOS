@@ -286,6 +286,9 @@ final class PauseMenuView: UIView {
             add(ChoiceRow("SCREEN", ["FULL", "SQUARE", "ARCADE"], selected: settings.screen.rawValue) { [weak self] in
                 self?.settings.screen = GameSettings.Screen(rawValue: $0) ?? .arcade; changed()
             })
+            add(ChoiceRow("CRT FILTER", ["ON", "OFF"], selected: settings.crtFilter ? 0 : 1) { [weak self] in
+                self?.settings.crtFilter = $0 == 0; changed()
+            })
             add(ChoiceRow("PIXELS", ["SHARP", "SMOOTH"], selected: settings.smoothPixels ? 1 : 0) { [weak self] in
                 self?.settings.smoothPixels = $0 == 1; changed()
             })

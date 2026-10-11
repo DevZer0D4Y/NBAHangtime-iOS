@@ -58,15 +58,18 @@ if windows:
     command+=['-I'+str(sdl/'include/SDL2'),'-L'+str(sdl/'lib')]
 else:
     command+=subprocess.check_output(['sdl2-config','--cflags'],text=True).split()
-command+=[str(root/'desktop/main.c'),str(common/'HangtimeCore.c'),str(common/'ROMAudit.c'),str(library)]
+command+=[str(root/'desktop/main.c'),str(root/'desktop/CRTSDL.c'),str(common/'HangtimeCore.c'),str(common/'ROMAudit.c'),str(library)]
 if windows:
     # Icon and version details, so Explorer and Task Manager show "NBA Hangtime".
     windres=args.windres or (str(toolchain/'x86_64-w64-mingw32-windres') if toolchain.exists() else cc.replace('clang','windres').replace('gcc','windres'))
     resource=build/'hangtime-resource.o'
     subprocess.run([windres,'-I',str(root/'desktop'),str(root/'desktop/hangtime.rc'),'-O','coff','-o',str(resource)],check=True)
     command.append(str(resource))
-if windows: command+=['-mwindows','-lSDL2','-lcomdlg32','-lws2_32','-lole32','-lshell32','-luuid','-lm','-o',str(output/'NBA Hangtime.exe')]
-else: command+=subprocess.check_output(['sdl2-config','--libs'],text=True).split()+['-lz','-o',str(output/'Hangtime')]
+if windows: command+=['-mwindows','-lopengl32','-lSDL2','-lcomdlg32','-lws2_32','-lole32','-lshell32','-luuid','-lm','-o',str(output/'NBA Hangtime.exe')]
+else:
+    command+=subprocess.check_output(['sdl2-config','--libs'],text=True).split()
+    command+=(['-framework','OpenGL'] if sys.platform=='darwin' else ['-lGL'])
+    command+=['-lz','-o',str(output/'Hangtime')]
 subprocess.run(command,check=True)
 if windows:
     shutil.copy2(sdl/'bin/SDL2.dll',output/'SDL2.dll')

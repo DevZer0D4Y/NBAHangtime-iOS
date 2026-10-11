@@ -1,6 +1,12 @@
-# NBA Hangtime 0.4.2
+# NBA Hangtime 0.4.3
 
-iOS build 7 · Windows x64 · iOS 16 or later
+iOS build 8 · Windows x64 · iOS 16 or later
+
+## New in 0.4.3
+
+- Add the NewPixie CRT filter on iOS and Windows. Enable or disable CRT FILTER from the iOS Display menu or Windows pause menu.
+- Save the setting across launches; default to OFF. Apply changes immediately without restarting the game.
+- Preserve the original pixel display with CRT off, and reset feedback when toggling or switching widescreen frame sizes.
 
 ## Changes since 0.4.0
 
@@ -17,7 +23,7 @@ iOS build 7 · Windows x64 · iOS 16 or later
 
 - `NBA-Hangtime-Windows-x64.zip`
 - `NBA-Hangtime-iOS.ipa` (unsigned; sign using your sideloading tool)
-- `NBA-Hangtime-0.4.2-source.zip`
+- `NBA-Hangtime-0.4.3-source.zip`
 
 Each archive has a companion SHA-256 checksum. Game ROMs are not included; the complete arcade L1.1 set is required. See `SOURCE.md` for source and distribution notices.
 
@@ -25,4 +31,4 @@ Each archive has a companion SHA-256 checksum. Game ROMs are not included; the c
 
 Windows and iOS release builds succeeded. ROM importer, controller routing, native XInput decoding, controller remapping, camera bounds, live widescreen switching, core bridge and release hygiene tests passed.
 
-Physical Xbox testing on Windows and iOS and visual confirmation of the revised inbound view remain outstanding. This build is ready for release-candidate testing; those checks are needed before calling it fully verified on hardware.
+Physical Xbox testing, visual confirmation of the revised inbound view and GPU rendering of the CRT effect remain unverified on Windows and iOS. The local build environment has no GPU/display access, so the graphics test harnesses could compile but could not run. If CRT is unavailable, the normal picture remains available.

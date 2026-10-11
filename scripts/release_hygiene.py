@@ -7,7 +7,7 @@ _PRIVATE_KEY = re.compile(rb'-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PR
 _FORBIDDEN_SUFFIXES = {
     '.zip', '.bin', '.rom', '.u54', '.u63', '.nv',
     '.o', '.a', '.pdb', '.log', '.swiftmodule', '.swiftdoc',
-    '.c', '.h', '.swift', '.py',
+    '.c', '.h', '.swift', '.py', '.metal', '.glsl',
     '.mobileprovision', '.p12', '.pfx', '.pem', '.key', '.cer', '.crt',
 }
 _FORBIDDEN_PARTS = {'.git', '.env', '.DS_Store', '__pycache__', 'xcuserdata', '_CodeSignature'}
