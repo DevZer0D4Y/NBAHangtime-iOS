@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Correct CRT curvature on iOS and Windows: center the tube geometry and remove scaling intended for the original shader’s frame artwork.
+- Render outside the curved screen as black, with a one-pixel edge fade, instead of stretching the outermost game pixels into the border.
+- Generate both CRT backends from shared shader math to keep their geometry and edge handling consistent.
+
 ## 0.4.3 (build 8)
 
 - Add the NewPixie CRT filter on iOS and Windows, with a saved CRT FILTER ON/OFF menu option. OFF is the default; changes apply immediately during play.

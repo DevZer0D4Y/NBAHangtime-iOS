@@ -31,6 +31,12 @@ int main(void) {
         /* Strong color bands must retain their orientation through all four passes. */
         unsigned upper=(120*640+320)*4,lower=(360*640+320)*4;
         assert(output[upper]>output[upper+2] && output[lower+2]>output[lower]);
+        /* Curved corners must be black even with bright source edge pixels. */
+        unsigned corners[]={0,639*4,479*640*4,(480*640-1)*4};
+        for(unsigned i=0;i<4;i++) {
+            unsigned c=corners[i];
+            assert(output[c]==0 && output[c+1]==0 && output[c+2]==0);
+        }
         /* Turning CRT off restores exactly the original SDL picture. */
         SDL_RenderCopy(renderer,texture,NULL,&rect);
         assert(SDL_RenderReadPixels(renderer,NULL,SDL_PIXELFORMAT_RGBA32,output,640*4)==0);

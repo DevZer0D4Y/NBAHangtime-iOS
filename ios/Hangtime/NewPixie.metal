@@ -11,10 +11,11 @@ vertex V crtVertex(uint id [[vertex_id]]) {
 }
 struct Params { float2 sourceSize;float2 outputSize;float frame;int mode; };
 // NewPixie CRT by Mattias Gustavsson (2016), Slang adaptation by hunterk.
-// Native adaptation: same four passes, default parameters, optional frame artwork omitted.
+// Native adaptation: four passes, centered tube geometry, no optional frame artwork.
 // See licenses/NewPixie-MIT.txt. Input UV is top-to-bottom on both backends.
 float3 tsample(texture2d<float> tex, float2 tc) {
-    tc=tc*float2(1.025,0.92)+float2(-0.0125,0.04);
+    // Black outside the tube: never stretch the last texel into the border.
+    if (tc.x < 0.0 || tc.x > 1.0 || tc.y < 0.0 || tc.y > 1.0) return float3(0.0);
     return pow(abs(sampleTex(tex,float2(tc.x,1.0-tc.y)).rgb),float3(2.2))*1.25;
 }
 float3 filmic(float3 c) {
@@ -22,16 +23,21 @@ float3 filmic(float3 c) {
     return (x*(6.2*x+0.5))/(x*(6.2*x+1.7)+0.06);
 }
 float2 curve(float2 uv) {
-    uv=(uv-0.5)*float2(0.925,1.095)*2.0;
-    uv.x*=1.0+pow(abs(uv.y)/4.0,2.0);
-    uv.y*=1.0+pow(abs(uv.x)/3.0,2.0);
-    return (uv/2.0+0.5)*0.92+0.04;
+    // Centered tube geometry, independent of the optional NewPixie frame artwork.
+    float2 p = (uv - 0.5) * 2.0;
+    float2 bend = float2(p.y * p.y / 16.0, p.x * p.x / 9.0);
+    return (p * (1.0 + bend * 0.6)) * 0.5 + 0.5;
+}
+float edgeMask(float2 uv, float2 resolution) {
+    // A one-output-pixel feather gives a clean, curved black boundary.
+    float2 distance = min(uv, 1.0 - uv) * resolution;
+    return smoothstep(0.0, 1.0, min(distance.x, distance.y));
 }
 float noise(float2 co) { return fract(sin(dot(co,float2(12.9898,78.233)))*43758.5453); }
 float4 newpixie(texture2d<float> backbuffer, texture2d<float> blurbuffer, float2 inputUV, float2 resolution, float frame) {
     float2 uv=float2(inputUV.x,1.0-inputUV.y);
-    float2 curved=mix(curve(uv),uv,0.4);
-    float2 scuv=curved*1.101-0.0505+float2(0.003,-0.001);
+    float2 curved=curve(uv);
+    float2 scuv=curved;
     float x=sin(uv.y*resolution.y*1.5)/resolution.x*0.25;
     float time=fmod(frame,640.0);
     float3 col;
@@ -62,7 +68,7 @@ float4 newpixie(texture2d<float> backbuffer, texture2d<float> blurbuffer, float2
     float2 seed=curved*resolution;
     col-=0.015*pow(float3(noise(seed+time),noise(seed+time*2.0),noise(seed+time*3.0)),float3(1.5));
     col*=1.0-0.004*(sin(50.0*time+curved.y*2.0)*0.5+0.5);
-    return float4(col,1.0);
+    return float4(max(col,float3(0.0))*edgeMask(curved,resolution),1.0);
 }
 float4 blur9(texture2d<float> tex,float2 uv,float2 stepUV) {
     float4 c=sampleTex(tex,uv)*0.2270270270;
