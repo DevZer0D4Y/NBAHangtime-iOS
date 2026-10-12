@@ -69,6 +69,12 @@ for w in [400, 512, 400] {
             from: MTLRegionMake2D(0,0,640,480),mipmapLevel: 0) }
         let upper = (120*640+320)*4,lower = (360*640+320)*4
         precondition(result[upper+2]>result[upper] && result[lower]>result[lower+2],"Image orientation changed")
+        if enabled {
+            for corner in [0,639*4,479*640*4,(480*640-1)*4] {
+                precondition(result[corner]==0 && result[corner+1]==0 && result[corner+2]==0,
+                    "CRT corners repeat source edge pixels")
+            }
+        }
         if !enabled {
             precondition(result[upper+2]==220 && result[upper]==20 && result[lower]==220 && result[lower+2]==20)
         }
