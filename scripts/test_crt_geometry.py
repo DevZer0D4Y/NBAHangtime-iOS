@@ -7,7 +7,10 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 source = (root / 'shared/newpixie.glsl').read_text()
-functions = '\n'.join(re.search(r'(?:vec2|float) ' + name + r'\([^)]*\) \{[^}]*\}', source).group() for name in ('curve', 'edgeMask'))
+curve = re.search(r'vec2 curve\([^)]*\) \{[^}]*\}', source).group()
+curvature = re.search(r'#define CURVATURE [^\n]+', source).group()
+mask = re.search(r'vec2 edge=1.5/resolution;\s*vec2 m=[^;]+;', source).group()
+functions = curvature + '\n' + curve + '\nfloat edgeMask(vec2 curved, vec2 resolution) {\n' + mask + '\nreturn m.x*m.y;\n}'
 code = r'''
 #include <algorithm>
 #include <cassert>
@@ -16,13 +19,19 @@ struct vec2 { double x,y; vec2(double a,double b):x(a),y(b){} vec2(double a):x(a
 vec2 operator+(vec2 a,vec2 b){return {a.x+b.x,a.y+b.y};}
 vec2 operator-(vec2 a,vec2 b){return {a.x-b.x,a.y-b.y};}
 vec2 operator*(vec2 a,vec2 b){return {a.x*b.x,a.y*b.y};}
+vec2 operator/(vec2 a,vec2 b){return {a.x/b.x,a.y/b.y};}
+using std::pow;using std::abs;
 vec2 min(vec2 a,vec2 b){return {std::min(a.x,b.x),std::min(a.y,b.y)};}
 using std::min;
 double smoothstep(double a,double b,double x){double t=std::clamp((x-a)/(b-a),0.0,1.0);return t*t*(3-2*t);}
+vec2 smoothstep(vec2 a,vec2 b,vec2 x){return {smoothstep(a.x,b.x,x.x),smoothstep(a.y,b.y,x.y)};}
 ''' + functions + r'''
 void close(double a,double b){assert(std::abs(a-b)<1e-6);}
 int main(){
  auto center=curve({.5,.5});close(center.x,.5);close(center.y,.5);
+ auto corner=curve({1,1});
+ close(corner.x,.5+.5*(1+std::pow(.5*1.095/4,2)));
+ close(corner.y,.5+.5*(1+std::pow((.5*.925*(1+std::pow(.5*1.095/4,2)))/3,2)));
  for(int y=0;y<=100;y++)for(int x=0;x<=100;x++){
   vec2 uv(x/100.0,y/100.0);auto p=curve(uv);
   auto mirrorX=curve({1-uv.x,uv.y});auto mirrorY=curve({uv.x,1-uv.y});
@@ -37,8 +46,8 @@ int main(){
    double t=i/100.0;
    for(auto uv:{vec2(0,t),vec2(1,t),vec2(t,0),vec2(t,1)})close(edgeMask(curve(uv),resolution),0);
   }
-  close(edgeMask({.5/resolution.x,.5},resolution),.5);
-  close(edgeMask({1/resolution.x,.5},resolution),1);
+  close(edgeMask({.75/resolution.x,.5},resolution),.5);
+  close(edgeMask({1.5/resolution.x,.5},resolution),1);
   close(edgeMask({-.001,.5},resolution),0);
   close(edgeMask({1.001,.5},resolution),0);
  }
