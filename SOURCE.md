@@ -1,8 +1,8 @@
 # Source and distribution
 
-NBA Hangtime 0.4.3 (iOS build 8) is an unofficial fan port.
+NBA Hangtime 0.4.4 (iOS build 9) is an unofficial fan port.
 
-Distribute the matching `NBA-Hangtime-0.4.3-source.zip` alongside the Windows ZIP and unsigned iOS IPA. The source archive contains the port and its patched MAME core, with build instructions in `README.md`.
+Distribute the matching `NBA-Hangtime-0.4.4-source.zip` alongside the Windows ZIP and unsigned iOS IPA. The source archive contains the port and its patched MAME core, with build instructions in `README.md`.
 
 Port source: https://github.com/DevZer0D4Y/NBAHangtime-iOS
 

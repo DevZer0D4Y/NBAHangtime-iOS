@@ -98,7 +98,7 @@ Menus and other screens stay 4:3 with black side bars. With widescreen off, the 
 
 ## Status
 
-Current version: **0.4.3 (build 8)**. Only the arcade ROM set revision L1.1 is supported. See the [changelog](CHANGELOG.md) for the changes in each version.
+Current version: **0.4.4 (build 9)**. Only the arcade ROM set revision L1.1 is supported. See the [changelog](CHANGELOG.md) for the changes in each version.
 
 ## Building
 
