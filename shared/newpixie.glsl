@@ -1,30 +1,32 @@
 // NewPixie CRT by Mattias Gustavsson (2016), Slang adaptation by hunterk.
-// Native adaptation: four passes, centered tube geometry, no optional frame artwork.
+// Native adaptation: same four passes and default parameters, except CURVATURE.
+// The upstream shader overscans the picture and hides its edges under bezel
+// artwork; without the bezel that overscan sampled outside the frame and smeared
+// the edge pixels. Here the picture maps 1:1 to the screen and everything outside
+// the curved tube is black.
 // See licenses/NewPixie-MIT.txt. Input UV is top-to-bottom on both backends.
+#define CURVATURE 1.0
+float inside(vec2 tc) {
+    vec2 a=step(vec2(0.0),tc)*step(tc,vec2(1.0));
+    return a.x*a.y;
+}
 vec3 tsample(sampler2D tex, vec2 tc) {
-    // Black outside the tube: never stretch the last texel into the border.
-    if (tc.x < 0.0 || tc.x > 1.0 || tc.y < 0.0 || tc.y > 1.0) return vec3(0.0);
-    return pow(abs(texture2D(tex,vec2(tc.x,1.0-tc.y)).rgb),vec3(2.2))*1.25;
+    return pow(abs(texture2D(tex,vec2(tc.x,1.0-tc.y)).rgb),vec3(2.2))*1.25*inside(tc);
 }
 vec3 filmic(vec3 c) {
     vec3 x=max(vec3(0.0),c-0.004);
     return (x*(6.2*x+0.5))/(x*(6.2*x+1.7)+0.06);
 }
 vec2 curve(vec2 uv) {
-    // Centered tube geometry, independent of the optional NewPixie frame artwork.
-    vec2 p = (uv - 0.5) * 2.0;
-    vec2 bend = vec2(p.y * p.y / 16.0, p.x * p.x / 9.0);
-    return (p * (1.0 + bend * 0.6)) * 0.5 + 0.5;
-}
-float edgeMask(vec2 uv, vec2 resolution) {
-    // A one-output-pixel feather gives a clean, curved black boundary.
-    vec2 distance = min(uv, 1.0 - uv) * resolution;
-    return smoothstep(0.0, 1.0, min(distance.x, distance.y));
+    uv=(uv-0.5)*vec2(0.925,1.095)*CURVATURE;
+    uv.x*=1.0+pow(abs(uv.y)/4.0,2.0);
+    uv.y*=1.0+pow(abs(uv.x)/3.0,2.0);
+    return uv/(vec2(0.925,1.095)*CURVATURE)+0.5;
 }
 float noise(vec2 co) { return fract(sin(dot(co,vec2(12.9898,78.233)))*43758.5453); }
 vec4 newpixie(sampler2D backbuffer, sampler2D blurbuffer, vec2 inputUV, vec2 resolution, float frame) {
     vec2 uv=vec2(inputUV.x,1.0-inputUV.y);
-    vec2 curved=curve(uv);
+    vec2 curved=mix(curve(uv),uv,0.4);
     vec2 scuv=curved;
     float x=sin(uv.y*resolution.y*1.5)/resolution.x*0.25;
     float time=mod(frame,640.0);
@@ -56,7 +58,10 @@ vec4 newpixie(sampler2D backbuffer, sampler2D blurbuffer, vec2 inputUV, vec2 res
     vec2 seed=curved*resolution;
     col-=0.015*pow(vec3(noise(seed+time),noise(seed+time*2.0),noise(seed+time*3.0)),vec3(1.5));
     col*=1.0-0.004*(sin(50.0*time+curved.y*2.0)*0.5+0.5);
-    return vec4(max(col,vec3(0.0))*edgeMask(curved,resolution),1.0);
+    // Antialiased tube edge, about one output pixel wide.
+    vec2 edge=1.5/resolution;
+    vec2 m=smoothstep(vec2(0.0),edge,curved)*smoothstep(vec2(0.0),edge,1.0-curved);
+    return vec4(max(col,vec3(0.0))*m.x*m.y,1.0);
 }
 vec4 blur9(sampler2D tex,vec2 uv,vec2 stepUV) {
     vec4 c=texture2D(tex,uv)*0.2270270270;
