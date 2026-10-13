@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.4 (build 9)
 
 - Match the corrected ports on iOS and Windows: use NewPixie CURVATURE 1.0 with a 40% blend toward the flat image, and remove scaling intended for frame artwork.
 - Render outside the curved screen as black, with a 1.5-pixel edge fade, instead of stretching the outermost game pixels into the border.
